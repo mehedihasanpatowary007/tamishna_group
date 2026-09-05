@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_petty_cash_period_search" model="ir.ui.view">
+        <field name="name">petty.cash.period.search</field>
+        <field name="model">petty.cash.period</field>
+        <field name="arch" type="xml">
+            <search string="Petty Cash Periods">
+                <field name="name"/>
+                <field name="fund_id"/>
+                <field name="company_id"/>
+                <filter name="open" string="Open" domain="[('state', '=', 'open')]"/>
+                <filter name="draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+                <filter name="closed" string="Closed" domain="[('state', '=', 'closed')]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_fund" string="Fund" context="{'group_by': 'fund_id'}"/>
+                    <filter name="group_company" string="Company" context="{'group_by': 'company_id'}"/>
+                    <filter name="group_start_month" string="Start Month" context="{'group_by': 'date_start:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    <record id="view_petty_cash_period_list" model="ir.ui.view">
+        <field name="name">petty.cash.period.list</field>
+        <field name="model">petty.cash.period</field>
+        <field name="arch" type="xml">
+            <list decoration-success="state == 'open'" decoration-muted="state == 'closed'">
+                <field name="name"/>
+                <field name="fund_id"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="date_start"/>
+                <field name="date_end"/>
+                <field name="opening_balance" sum="Opening"/>
+                <field name="total_received" sum="Received"/>
+                <field name="total_paid" sum="Paid"/>
+                <field name="closing_balance" sum="Closing"/>
+                <field name="currency_id" column_invisible="True"/>
+                <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'open'"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_petty_cash_period_form" model="ir.ui.view">
+        <field name="name">petty.cash.period.form</field>
+        <field name="model">petty.cash.period</field>
+        <field name="arch" type="xml">
+            <form string="Petty Cash Period">
+                <header>
+                    <button name="action_open" string="Open Period" type="object" class="btn-primary" invisible="state != 'draft'" groups="petty_cash_management.group_petty_cash_finance_manager"/>
+                    <button name="action_close" string="Close Period" type="object" class="btn-primary" invisible="state != 'open'" groups="petty_cash_management.group_petty_cash_finance_manager"/>
+                    <button name="action_print_statement" string="Print Statement" type="object" invisible="state == 'draft'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,open,closed"/>
+                </header>
+                <sheet>
+                    <div class="oe_title"><label for="name"/><h1><field name="name" readonly="state == 'closed'"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="fund_id" readonly="state != 'draft'"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="date_start" readonly="state != 'draft'"/>
+                            <field name="date_end" readonly="state != 'draft'"/>
+                            <field name="reconciled" readonly="state == 'closed'"/>
+                        </group>
+                        <group string="Balances">
+                            <field name="currency_id" invisible="1"/>
+                            <field name="opening_balance"/>
+                            <field name="opening_balance_confirmed" invisible="1"/>
+                            <field name="total_received"/>
+                            <field name="total_paid"/>
+                            <field name="closing_balance"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Transactions">
+                            <field name="transaction_ids" readonly="state == 'closed'">
+                                <list create="false" delete="false">
+                                    <field name="date"/>
+                                    <field name="name"/>
+                                    <field name="transaction_type"/>
+                                    <field name="description"/>
+                                    <field name="amount"/>
+                                    <field name="currency_id" column_invisible="True"/>
+                                    <field name="state" widget="badge"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Closing Audit" invisible="state != 'closed'">
+                            <group>
+                                <field name="closed_by_id"/>
+                                <field name="closed_at"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+    <record id="action_petty_cash_period" model="ir.actions.act_window">
+        <field name="name">Periods</field>
+        <field name="res_model">petty.cash.period</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_petty_cash_period_search"/>
+        <field name="context">{'search_default_open': 1}</field>
+    </record>
+</odoo>

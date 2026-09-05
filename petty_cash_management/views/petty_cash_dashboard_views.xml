@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_petty_cash_dashboard_kanban" model="ir.ui.view">
+        <field name="name">petty.cash.dashboard.kanban</field>
+        <field name="model">petty.cash.dashboard</field>
+        <field name="arch" type="xml">
+            <kanban create="false" edit="false" delete="false" class="o_kanban_dashboard">
+                <field name="company_id"/><field name="currency_id"/><field name="total_funds"/>
+                <field name="total_available"/><field name="current_month_expenses"/>
+                <field name="current_month_receipts"/><field name="pending_approvals"/>
+                <field name="funds_below_minimum"/><field name="total_replenishment"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="mb-3"><strong class="fs-4"><field name="company_id"/></strong><br/><span class="text-muted"><field name="currency_id"/></span></div>
+                        <div class="row g-3">
+                            <div class="col-6"><span class="text-muted">Funds</span><div class="fs-3"><field name="total_funds"/></div></div>
+                            <div class="col-6"><span class="text-muted">Available Cash</span><div class="fs-3"><field name="total_available"/></div></div>
+                            <div class="col-6"><span class="text-muted">Month Receipts</span><div class="fs-5"><field name="current_month_receipts"/></div></div>
+                            <div class="col-6"><span class="text-muted">Month Expenses</span><div class="fs-5"><field name="current_month_expenses"/></div></div>
+                            <div class="col-6"><span class="text-muted">Pending Approvals</span><div class="fs-5"><field name="pending_approvals"/></div></div>
+                            <div class="col-6"><span class="text-muted">Below Minimum</span><div class="fs-5 text-danger"><field name="funds_below_minimum"/></div></div>
+                            <div class="col-12"><span class="text-muted">Month Replenishment</span><div class="fs-5"><field name="total_replenishment"/></div></div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+    <record id="view_petty_cash_dashboard_list" model="ir.ui.view">
+        <field name="name">petty.cash.dashboard.list</field>
+        <field name="model">petty.cash.dashboard</field>
+        <field name="arch" type="xml">
+            <list create="false" edit="false" delete="false">
+                <field name="company_id"/><field name="currency_id"/><field name="total_funds"/>
+                <field name="total_available"/><field name="current_month_receipts"/>
+                <field name="current_month_expenses"/><field name="pending_approvals"/>
+                <field name="funds_below_minimum"/><field name="total_replenishment"/>
+            </list>
+        </field>
+    </record>
+    <record id="action_petty_cash_dashboard" model="ir.actions.act_window">
+        <field name="name">Petty Cash Dashboard</field>
+        <field name="res_model">petty.cash.dashboard</field>
+        <field name="view_mode">kanban,list</field>
+    </record>
+</odoo>

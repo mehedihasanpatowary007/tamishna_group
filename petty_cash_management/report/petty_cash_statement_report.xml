@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_petty_cash_statement" model="ir.actions.report">
+        <field name="name">Petty Cash Statement</field>
+        <field name="model">petty.cash.period</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">petty_cash_management.report_petty_cash_statement</field>
+        <field name="report_file">petty_cash_management.report_petty_cash_statement</field>
+        <field name="binding_model_id" ref="model_petty_cash_period"/>
+        <field name="binding_type">report</field>
+        <field name="print_report_name">'Petty Cash Statement - %s' % object.name</field>
+    </record>
+
+    <template id="report_petty_cash_statement">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="period">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Petty Cash Statement</h2>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <strong>Fund:</strong> <span t-field="period.fund_id"/><br/>
+                                <strong>Company:</strong> <span t-field="period.company_id"/><br/>
+                                <strong>Branch / Location:</strong> <span t-field="period.fund_id.branch"/>
+                            </div>
+                            <div class="col-6">
+                                <strong>Period:</strong> <span t-field="period.name"/><br/>
+                                <strong>From:</strong> <span t-field="period.date_start"/> <strong>To:</strong> <span t-field="period.date_end"/><br/>
+                                <strong>Custodian:</strong> <span t-field="period.fund_id.custodian_id"/>
+                            </div>
+                        </div>
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Date</th><th>Reference</th><th>Description</th><th>Type</th>
+                                    <th class="text-end">Cash In</th><th class="text-end">Cash Out</th><th class="text-end">Running Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="period._get_statement_lines()" t-as="line">
+                                    <t t-set="transaction" t-value="line['transaction']"/>
+                                    <tr>
+                                        <td><span t-field="transaction.date"/></td>
+                                        <td><span t-field="transaction.name"/></td>
+                                        <td><span t-field="transaction.description"/></td>
+                                        <td><span t-field="transaction.transaction_type"/></td>
+                                        <td class="text-end"><span t-out="line['cash_in']" t-options="{'widget': 'monetary', 'display_currency': period.currency_id}"/></td>
+                                        <td class="text-end"><span t-out="line['cash_out']" t-options="{'widget': 'monetary', 'display_currency': period.currency_id}"/></td>
+                                        <td class="text-end"><span t-out="line['balance']" t-options="{'widget': 'monetary', 'display_currency': period.currency_id}"/></td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                            <tfoot>
+                                <tr><th colspan="4">Totals</th>
+                                    <th class="text-end"><span t-out="period.opening_balance + period.total_received" t-options="{'widget': 'monetary', 'display_currency': period.currency_id}"/></th>
+                                    <th class="text-end"><span t-field="period.total_paid"/></th>
+                                    <th class="text-end"><span t-field="period.closing_balance"/></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                        <div class="row mt-4">
+                            <div class="col-4"><strong>Opening Balance</strong><br/><span t-field="period.opening_balance"/></div>
+                            <div class="col-4"><strong>Total Received</strong><br/><span t-field="period.total_received"/></div>
+                            <div class="col-4"><strong>Closing Balance</strong><br/><span t-field="period.closing_balance"/></div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>
