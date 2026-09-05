@@ -21,7 +21,7 @@
                 <filter name="posted" string="Posted" domain="[('state', '=', 'posted')]"/>
                 <separator/>
                 <filter name="transaction_date" string="Transaction Date" date="date"/>
-                <group expand="0" string="Group By">
+                <group name="group_by">
                     <filter name="group_type" string="Type" context="{'group_by': 'transaction_type'}"/>
                     <filter name="group_fund" string="Fund" context="{'group_by': 'fund_id'}"/>
                     <filter name="group_category" string="Expense Category" context="{'group_by': 'category_id'}"/>

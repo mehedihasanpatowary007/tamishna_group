@@ -23,7 +23,9 @@ This repository contains an Odoo 19 custom application for the complete petty-ca
 4. Remove the default **Apps** filter if necessary, search for **Petty Cash Management**, and install it.
 5. Assign Petty Cash privileges to users from **Settings → Users & Companies → Users**.
 
-The installable module is [`petty_cash_management`](petty_cash_management). Its manifest version is `19.0.1.0.0`.
+The installable module is [`petty_cash_management`](petty_cash_management). Its manifest version is `19.0.1.0.1`.
+
+App logo path: `petty_cash_management/static/description/icon.png` (place your PNG logo at this exact path).
 
 ## Initial configuration
 

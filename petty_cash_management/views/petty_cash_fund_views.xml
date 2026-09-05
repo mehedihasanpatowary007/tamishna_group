@@ -11,7 +11,7 @@
                 <field name="company_id"/>
                 <filter name="below_minimum" string="Below Minimum" domain="[('below_minimum', '=', True)]"/>
                 <filter name="inactive" string="Inactive" domain="[('active', '=', False)]"/>
-                <group expand="0" string="Group By">
+                <group name="group_by">
                     <filter name="group_company" string="Company" context="{'group_by': 'company_id'}"/>
                     <filter name="group_custodian" string="Custodian" context="{'group_by': 'custodian_id'}"/>
                     <filter name="group_branch" string="Branch / Location" context="{'group_by': 'branch'}"/>
@@ -134,4 +134,3 @@
         <field name="context">{'search_default_group_company': 1}</field>
     </record>
 </odoo>
-

@@ -11,7 +11,7 @@
                 <filter name="open" string="Open" domain="[('state', '=', 'open')]"/>
                 <filter name="draft" string="Draft" domain="[('state', '=', 'draft')]"/>
                 <filter name="closed" string="Closed" domain="[('state', '=', 'closed')]"/>
-                <group expand="0" string="Group By">
+                <group name="group_by">
                     <filter name="group_fund" string="Fund" context="{'group_by': 'fund_id'}"/>
                     <filter name="group_company" string="Company" context="{'group_by': 'company_id'}"/>
                     <filter name="group_start_month" string="Start Month" context="{'group_by': 'date_start:month'}"/>

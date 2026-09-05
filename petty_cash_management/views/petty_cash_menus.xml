@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <menuitem id="menu_petty_cash_root" name="Petty Cash" sequence="35"
+              web_icon="petty_cash_management,static/description/icon.png"
               groups="petty_cash_management.group_petty_cash_custodian,petty_cash_management.group_petty_cash_department_manager,petty_cash_management.group_petty_cash_accountant,petty_cash_management.group_petty_cash_finance_manager,petty_cash_management.group_petty_cash_management"/>
 
     <menuitem id="menu_petty_cash_dashboard" name="Dashboard" parent="menu_petty_cash_root"
