@@ -1,7 +1,7 @@
 {
     "name": "Petty Cash Management",
     "summary": "Controlled petty cash funds, approvals, accounting, periods, and reports",
-    "version": "19.0.2.0.4",
+    "version": "19.0.2.0.5",
     "category": "Accounting/Accounting",
     "author": "Mehedi Hasan",
     "website": "https://www.zencoreltd.com",
@@ -23,6 +23,17 @@
         "report/petty_cash_statement_report.xml",
         "views/petty_cash_menus.xml",
     ],
+    "assets": {
+        "web.assets_backend": [
+            "petty_cash_management/static/src/fields/supporting_documents_field.js",
+            "petty_cash_management/static/src/fields/supporting_documents_field.xml",
+        ],
+        "web.assets_unit_tests": [
+            "petty_cash_management/static/src/fields/supporting_documents_field.js",
+            "petty_cash_management/static/src/fields/supporting_documents_field.xml",
+            "petty_cash_management/static/tests/supporting_documents_field.test.js",
+        ],
+    },
     "application": True,
     "installable": True,
 }

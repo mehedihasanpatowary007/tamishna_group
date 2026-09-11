@@ -22,6 +22,10 @@ Funds, Cash Receipts, Replenishments and All Transactions menus are restricted t
 
 Forms show clear workflow messages and reviewer notes. Available cash is shown only to Accounting Administrators. Ledger fields and optional employee details are visible only to Accounting Administrators. The requester is recorded automatically and the matching open period is selected when the fund/date changes.
 
+## Supporting document previews
+
+Click a PDF or image filename in **Supporting Documents** to preview it inside Odoo, including while a request is pending or posted. The viewer supports navigation between attachments and has a Download option. Every attachment also has a separate Download button; other file types, such as Word and Excel, remain download-only. Uploading and removal remain limited to draft and returned requests. Files use the existing authenticated attachment routes.
+
 ## Company selection
 
 Use Odoo's company selector at the top of the screen. Selecting Company A shows only A's data; selecting A and B shows both companies. This applies to requests, fund choices, periods, categories, dashboard totals and reports. Users can select only companies assigned to their account.
@@ -43,7 +47,7 @@ Normal users do not need to select a ledger account or employee to submit. Requi
 
 ## Upgrade on Odoo.sh
 
-Push the changes to the connected branch and upgrade **Petty Cash Management** in Apps. Version: `19.0.2.0.4`.
+Push the changes to the connected branch and upgrade **Petty Cash Management** in Apps. Version: `19.0.2.0.5`.
 
 The upgrade moves old manager-pending and approved-but-unposted requests into Pending Approval, preserves existing audit history and journal links, and restores request ownership from the original creator. It does not post entries automatically. Assign Accounting / Administrator to the people who should approve; old petty cash manager membership alone is insufficient.
 

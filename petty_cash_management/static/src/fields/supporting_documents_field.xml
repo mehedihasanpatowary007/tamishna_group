@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="petty_cash_management.SupportingDocumentsField"
+       t-inherit="web.Many2ManyBinaryField" t-inherit-mode="primary">
+        <xpath expr="//t[@t-call='web.Many2ManyBinaryField.attachment_preview']" position="attributes">
+            <attribute name="t-call">petty_cash_management.SupportingDocumentCard</attribute>
+        </xpath>
+    </t>
+
+    <t t-name="petty_cash_management.SupportingDocumentCard">
+        <div class="o_petty_cash_document d-flex flex-wrap align-items-center gap-2 border rounded p-2 mb-2 w-100">
+            <div class="flex-grow-1 overflow-hidden">
+                <button t-if="file.isViewable" type="button"
+                        class="o_petty_cash_document_preview btn btn-link text-start text-break p-0"
+                        title="Preview document" t-on-click.stop="() => this.previewFile(file.id)">
+                    <i t-att-class="file.isPdf ? 'fa fa-file-pdf-o me-2' : 'fa fa-picture-o me-2'" aria-hidden="true"/>
+                    <t t-out="file.name"/>
+                    <span class="badge text-bg-light ms-2">Preview</span>
+                </button>
+                <div t-else="" class="text-break">
+                    <i class="fa fa-file-o me-2" aria-hidden="true"/>
+                    <t t-out="file.name"/>
+                    <small class="d-block text-muted">Preview unavailable for this file type. Use Download.</small>
+                </div>
+            </div>
+            <a class="o_petty_cash_document_download btn btn-light btn-sm"
+               t-att-href="file.downloadUrl" download="" title="Download document">
+                <i class="fa fa-download me-1" aria-hidden="true"/>Download
+            </a>
+            <button t-if="!props.readonly" type="button"
+                    class="o_petty_cash_document_remove btn btn-light btn-sm"
+                    title="Remove document" aria-label="Remove document"
+                    t-on-click.stop="() => this.onFileRemove(file.id)">
+                <i class="fa fa-times" aria-hidden="true"/>
+            </button>
+        </div>
+    </t>
+</templates>
