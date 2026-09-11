@@ -96,7 +96,8 @@
           </div>
           <group>
             <group>
-              <field name="transaction_type" readonly="state not in ('draft', 'returned')" />
+              <field name="transaction_type" readonly="state not in ('draft', 'returned')" groups="account.group_account_manager" />
+              <field name="transaction_type" readonly="1" groups="!account.group_account_manager" />
               <field name="date" readonly="state not in ('draft', 'returned')" />
               <field name="fund_id" readonly="state not in ('draft', 'returned')" />
               <field name="company_id" groups="base.group_multi_company" readonly="1" />

@@ -102,16 +102,25 @@ class TestPettyCash(TransactionCase):
         })
 
     def _user_request(self, user, **values):
+        is_admin = user.has_group("account.group_account_manager")
         vals = {
-            "transaction_type": "receipt", "receipt_type": "cash",
+            "transaction_type": "receipt" if is_admin else "expense", "receipt_type": "cash",
             "date": self.period.date_start, "fund_id": self.fund.id,
-            "period_id": self.period.id, "amount": 5000,
-            "description": "Cash received without accounting access",
+            "period_id": self.period.id, "amount": 5000 if is_admin else 1000,
+            "description": "Petty cash request",
         }
         vals.update(values)
+        if vals["transaction_type"] == "expense":
+            vals.setdefault("category_id", self.category.id)
+            if "attachment_ids" not in vals:
+                receipt = self.env["ir.attachment"].with_user(user).create({
+                    "name": "receipt.txt", "datas": base64.b64encode(b"expense receipt"),
+                })
+                vals["attachment_ids"] = [Command.link(receipt.id)]
         return self.env["petty.cash.transaction"].with_user(user).create(vals)
 
     def test_normal_user_submit_and_administrator_posts_once(self):
+        self._approve_and_post(self._user_request(self.env.user))
         user = self._normal_user("petty.normal")
         self.assertFalse(user.has_group("account.group_account_invoice"))
         self.assertFalse(user.has_group("account.group_account_manager"))
@@ -129,9 +138,9 @@ class TestPettyCash(TransactionCase):
         self.assertEqual(admin_request.state, "posted")
         self.assertEqual(admin_request.move_id.state, "posted")
         self.assertEqual(admin_request.move_id.petty_cash_transaction_id, admin_request)
-        self.assertEqual(self.fund.current_balance, 5000)
+        self.assertEqual(self.fund.current_balance, 4000)
         self.assertEqual(admin_request.finance_approved_by_id, administrator)
-        self.assertEqual(self.fund.with_user(user).current_balance, 5000)
+        self.assertEqual(self.fund.with_user(user).current_balance, 4000)
         with self.assertRaises(UserError):
             admin_request.action_approve()
         self.assertEqual(self.env["account.move"].search_count([
@@ -172,6 +181,7 @@ class TestPettyCash(TransactionCase):
             self.env["account.move"].with_user(user).check_access("create")
 
     def test_return_correct_and_resubmit(self):
+        self._approve_and_post(self._user_request(self.env.user))
         user = self._normal_user("petty.return")
         request = self._user_request(user)
         request.action_submit()
@@ -183,7 +193,7 @@ class TestPettyCash(TransactionCase):
         request.write({"amount": 4000})
         request.action_submit()
         request.with_env(self.env).action_approve()
-        self.assertEqual(self.fund.current_balance, 4000)
+        self.assertEqual(self.fund.current_balance, 1000)
 
     def test_missing_source_account_leaves_request_pending(self):
         self.fund.source_account_id = False
@@ -244,19 +254,29 @@ class TestPettyCash(TransactionCase):
         period_b.with_user(admin).with_context(allowed_company_ids=companies.ids).action_open()
         category_b = setup["petty.cash.category"].create({
             "name": "Company B Category", "company_id": company_b.id,
-            "expense_account_id": expense_b.id,
+            "expense_account_id": expense_b.id, "attachment_required": False,
         })
+        self.category.attachment_required = False
+        for fund, period in [(self.fund, self.period), (fund_b, period_b)]:
+            incoming = self.env["petty.cash.transaction"].with_user(admin).with_context(
+                allowed_company_ids=companies.ids,
+            ).create({
+                "transaction_type": "receipt", "receipt_type": "cash", "amount": 5000,
+                "description": "Administrator funds company", "date": period.date_start,
+                "fund_id": fund.id, "period_id": period.id,
+            })
+            self._approve_and_post(incoming)
         requests = self.env["petty.cash.transaction"].with_user(user).with_context(
             allowed_company_ids=companies.ids,
         )
         request_a = requests.create({
-            "transaction_type": "receipt", "receipt_type": "cash", "amount": 1000,
-            "description": "Company A receipt", "date": self.period.date_start,
+            "transaction_type": "expense", "category_id": self.category.id, "amount": 1000,
+            "description": "Company A expense", "date": self.period.date_start,
             "fund_id": self.fund.id, "period_id": self.period.id,
         })
         request_b = requests.create({
-            "transaction_type": "receipt", "receipt_type": "cash", "amount": 2000,
-            "description": "Company B receipt", "date": self.period.date_start,
+            "transaction_type": "expense", "category_id": category_b.id, "amount": 2000,
+            "description": "Company B expense", "date": self.period.date_start,
             "fund_id": fund_b.id, "period_id": period_b.id,
         })
         self.assertEqual(request_b.company_id, company_b)
@@ -284,9 +304,9 @@ class TestPettyCash(TransactionCase):
             self.assertEqual(set(dashboard.company_id.ids), set(selected))
             totals = {row.company_id.id: row.total_available for row in dashboard}
             if self.company.id in selected:
-                self.assertEqual(totals[self.company.id], 1000)
+                self.assertEqual(totals[self.company.id], 4000)
             if company_b.id in selected:
-                self.assertEqual(totals[company_b.id], 2000)
+                self.assertEqual(totals[company_b.id], 3000)
         for actor in (user, admin):
             hidden = request_b.with_user(actor).with_context(allowed_company_ids=self.company.ids)
             with self.assertRaises(AccessError):
@@ -296,3 +316,30 @@ class TestPettyCash(TransactionCase):
         action = fund_b.with_user(user).with_context(allowed_company_ids=companies.ids).action_new_request()
         self.assertEqual(action["context"]["allowed_company_ids"], companies.ids)
         self.assertEqual(action["context"]["default_company_id"], company_b.id)
+
+    def test_incoming_cash_is_restricted_to_accounting_administrators(self):
+        user = self._normal_user("petty.expenses.only")
+        request = self._user_request(user)
+        for transaction_type in ("opening", "receipt", "replenishment"):
+            with self.subTest(transaction_type=transaction_type):
+                with self.assertRaises(AccessError):
+                    self._user_request(user, transaction_type=transaction_type)
+                with self.assertRaises(AccessError):
+                    request.write({"transaction_type": transaction_type})
+                with self.assertRaises(AccessError):
+                    self.env["petty.cash.transaction"].with_user(user).with_context(
+                        default_transaction_type=transaction_type,
+                    ).create({
+                        "fund_id": self.fund.id, "period_id": self.period.id,
+                        "date": self.period.date_start, "amount": 100,
+                        "description": "Attempt via context default",
+                    })
+                incoming = self._user_request(self.env.user, transaction_type=transaction_type, amount=100)
+                self._approve_and_post(incoming)
+                self.assertEqual(incoming.state, "posted")
+        self.assertEqual(self.fund.current_balance, 300)
+        self.assertEqual(request.transaction_type, "expense")
+        visible = self.env["ir.ui.menu"].with_user(user)._visible_menu_ids()
+        for xmlid in ("menu_petty_cash_receipts", "menu_petty_cash_replenishments", "menu_petty_cash_transactions"):
+            self.assertNotIn(self.env.ref("petty_cash_management." + xmlid).id, visible)
+        self.assertIn(self.env.ref("petty_cash_management.menu_petty_cash_my_requests").id, visible)

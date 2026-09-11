@@ -97,12 +97,14 @@ class PettyCashTransaction(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         sequence = self.env["ir.sequence"]
+        default_type = self.default_get(["transaction_type"]).get("transaction_type", "expense")
         audit_fields = {
             "move_id", "submitted_by_id", "submitted_at", "manager_approved_by_id",
             "manager_approved_at", "finance_approved_by_id", "finance_approved_at",
             "posted_by_id", "posted_at", "decision_by_id", "decision_at", "decision_reason",
         }
         for vals in vals_list:
+            self._check_transaction_type_access(vals.get("transaction_type", default_type))
             if vals.get("state", "draft") != "draft" or any(vals.get(field) for field in audit_fields):
                 raise AccessError(_("New transactions must start in Draft without approval audit data."))
             vals["state"] = "draft"
@@ -184,8 +186,17 @@ class PettyCashTransaction(models.Model):
         if not self.env.user.has_group("account.group_account_manager"):
             raise AccessError(_("Only an Accounting Administrator can approve and post petty cash."))
 
+    @api.model
+    def _check_transaction_type_access(self, transaction_type):
+        if transaction_type != "expense" and not self.env.user.has_group("account.group_account_manager"):
+            raise AccessError(_(
+                "You can only create and submit expense requests. Opening balances, "
+                "cash receipts and replenishments are managed by an Accounting Administrator."
+            ))
+
     def _check_custodian_or_finance(self):
         self.ensure_one()
+        self._check_transaction_type_access(self.transaction_type)
         if self.create_uid == self.env.user:
             return
         if self.env.user.has_group("account.group_account_manager"):
@@ -300,6 +311,10 @@ class PettyCashTransaction(models.Model):
             transaction.with_context(petty_cash_state_transition=_WORKFLOW_TOKEN).write({"state": "draft"})
 
     def write(self, vals):
+        if "transaction_type" in vals:
+            self._check_transaction_type_access(vals["transaction_type"])
+        for transaction in self:
+            self._check_transaction_type_access(transaction.transaction_type)
         if vals.get("fund_id"):
             vals = dict(vals, company_id=self.env["petty.cash.fund"].browse(vals["fund_id"]).company_id.id)
         target_state = vals.get("state")

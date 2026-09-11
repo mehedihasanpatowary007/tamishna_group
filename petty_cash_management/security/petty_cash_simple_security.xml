@@ -4,7 +4,7 @@
         <field name="name">request owner</field>
         <field name="model_id" ref="model_petty_cash_transaction"/>
         <field name="groups" eval="[Command.link(ref('base.group_user'))]"/>
-        <field name="domain_force">[('create_uid', '=', user.id)]</field>
+        <field name="domain_force">[('create_uid', '=', user.id), ('transaction_type', '=', 'expense')]</field>
     </record>
     <record id="rule_request_admin" model="ir.rule">
         <field name="name">request admin</field>
