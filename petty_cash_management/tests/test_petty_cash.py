@@ -1,8 +1,11 @@
 import base64
 
+from lxml import etree
+
 from odoo import Command, fields
 from odoo.exceptions import AccessError, UserError
 from odoo.tests import TransactionCase, tagged
+from odoo.tools.safe_eval import safe_eval
 
 
 @tagged("post_install", "-at_install")
@@ -298,6 +301,25 @@ class TestPettyCash(TransactionCase):
                     Model = self.env[model].with_user(actor).with_context(allowed_company_ids=selected)
                     expected = {id_a, id_b} if expected_index is None else {id_a if expected_index == 1 else id_b}
                     self.assertEqual(set(Model.search([("id", "in", [id_a, id_b])]).ids), expected)
+                # Exercise the actual dropdown domain from the processed form,
+                # not just an unrestricted model search. The form company is
+                # still empty before selecting a fund in a new period/request.
+                for model in ("petty.cash.transaction", "petty.cash.period"):
+                    Model = self.env[model].with_user(actor).with_context(allowed_company_ids=selected)
+                    view = Model.get_view(view_type="form")
+                    arch = etree.fromstring(view["arch"])
+                    nodes = arch.xpath("//field[@name='fund_id'][not(ancestor::field)]")
+                    self.assertTrue(nodes)
+                    for node in nodes:
+                        self.assertIsNotNone(node.get("domain"))
+                        domain = safe_eval(node.get("domain"), {"company_id": False, "context": {}})
+                        choices = Model.env["petty.cash.fund"].name_search(
+                            "", domain + [("id", "in", [self.fund.id, fund_b.id])], limit=100,
+                        )
+                        expected = {self.fund.id, fund_b.id} if expected_index is None else {
+                            self.fund.id if expected_index == 1 else fund_b.id
+                        }
+                        self.assertEqual({record_id for record_id, name in choices}, expected)
         for selected in (self.company.ids, company_b.ids, companies.ids):
             dashboard = self.env["petty.cash.dashboard"].with_user(admin).with_context(
                 allowed_company_ids=selected,
@@ -368,3 +390,26 @@ class TestPettyCash(TransactionCase):
             self.env.ref("petty_cash_management.menu_petty_cash_funds").id,
             self.env["ir.ui.menu"]._visible_menu_ids(),
         )
+
+    def test_new_request_keeps_company_until_fund_is_selected(self):
+        user = self._normal_user("petty.dropdown")
+        Model = self.env["petty.cash.transaction"].with_user(user).with_context({})
+        request = Model.new({"company_id": self.company.id, "date": self.period.date_start})
+        request._onchange_fund_id()
+        self.assertEqual(request.company_id, self.company)
+        self.assertFalse(request.period_id)
+        arch = etree.fromstring(Model.get_view(view_type="form")["arch"])
+        node = arch.xpath("//field[@name='fund_id'][not(ancestor::field)]")[0]
+        domain = safe_eval(node.get("domain"), {"company_id": False, "context": {}})
+        self.assertIn(self.fund.id, {
+            record_id for record_id, name in Model.env["petty.cash.fund"].name_search(
+                "", domain + [("id", "=", self.fund.id)],
+            )
+        })
+        request.fund_id = self.fund
+        request._onchange_fund_id()
+        self.assertEqual(request.company_id, self.company)
+        self.assertEqual(request.period_id, self.period)
+        request.date = False
+        request._onchange_fund_id()
+        self.assertFalse(request.period_id)

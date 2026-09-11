@@ -21,7 +21,6 @@ class PettyCashTransaction(models.Model):
     fund_id = fields.Many2one(
         "petty.cash.fund", required=True, ondelete="restrict", index=True,
         check_company=True, tracking=True,
-        domain="[('company_id', 'in', context.get('allowed_company_ids', []))]",
     )
     company_id = fields.Many2one("res.company", required=True, default=lambda self: self.env.company, index=True)
     currency_id = fields.Many2one(related="fund_id.currency_id", store=True)
@@ -119,6 +118,9 @@ class PettyCashTransaction(models.Model):
 
     @api.onchange("fund_id", "date")
     def _onchange_fund_id(self):
+        if not self.fund_id:
+            self.period_id = False
+            return
         previous_company = self.company_id
         self.company_id = self.fund_id.company_id
         if previous_company != self.company_id:
@@ -126,6 +128,9 @@ class PettyCashTransaction(models.Model):
             self.counterpart_account_id = False
             self.department_id = False
             self.requester_id = False
+        if not self.date:
+            self.period_id = False
+            return
         self.period_id = self.env["petty.cash.period"].search([
             ("fund_id", "=", self.fund_id.id), ("state", "=", "open"),
             ("date_start", "<=", self.date), ("date_end", ">=", self.date),

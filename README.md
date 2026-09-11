@@ -28,6 +28,8 @@ Use Odoo's company selector at the top of the screen. Selecting Company A shows 
 
 Normal users still see only their own expense requests within the selected companies. Accounting Administrators see all requests within that selection. Company names appear on request and fund cards, and dashboard totals remain separate per company and currency. A request and its journal entry always belong to the selected fund's company, even when another selected company is the main company.
 
+Fund dropdowns in requests and periods list active funds from the selected companies, including funds with a zero balance. The company is assigned from the chosen fund. Creating a fund is sufficient for it to appear; an open period is required later to submit a transaction.
+
 ## Setup
 
 1. Install the module on Odoo 19 with `account`, `hr` and `mail` available.
@@ -41,7 +43,7 @@ Normal users do not need to select a ledger account or employee to submit. Requi
 
 ## Upgrade on Odoo.sh
 
-Push the changes to the connected branch and upgrade **Petty Cash Management** in Apps. Version: `19.0.2.0.3`.
+Push the changes to the connected branch and upgrade **Petty Cash Management** in Apps. Version: `19.0.2.0.4`.
 
 The upgrade moves old manager-pending and approved-but-unposted requests into Pending Approval, preserves existing audit history and journal links, and restores request ownership from the original creator. It does not post entries automatically. Assign Accounting / Administrator to the people who should approve; old petty cash manager membership alone is insufficient.
 

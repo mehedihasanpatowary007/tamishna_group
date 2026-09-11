@@ -99,8 +99,11 @@
               <field name="transaction_type" readonly="state not in ('draft', 'returned')" groups="account.group_account_manager" />
               <field name="transaction_type" readonly="1" groups="!account.group_account_manager" />
               <field name="date" readonly="state not in ('draft', 'returned')" />
-              <field name="fund_id" readonly="state not in ('draft', 'returned')" groups="account.group_account_manager" />
-              <field name="fund_id" options="{'no_open': True, 'no_create': True}" readonly="state not in ('draft', 'returned')" groups="!account.group_account_manager" />
+              <!-- The fund determines the company. Use an explicit view domain
+                   to avoid the generated check_company domain before selection.
+                   Global fund record rules enforce the selected companies. -->
+              <field name="fund_id" domain="[('active', '=', True)]" readonly="state not in ('draft', 'returned')" groups="account.group_account_manager" />
+              <field name="fund_id" domain="[('active', '=', True)]" options="{'no_open': True, 'no_create': True}" readonly="state not in ('draft', 'returned')" groups="!account.group_account_manager" />
               <field name="company_id" groups="base.group_multi_company" readonly="1" />
               <field name="period_id" domain="[('fund_id', '=', fund_id), ('state', '=', 'open')]" readonly="state not in ('draft', 'returned')" />
               <field name="custodian_id" readonly="1" />
