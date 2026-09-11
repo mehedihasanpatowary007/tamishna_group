@@ -13,7 +13,7 @@
   <menuitem id="menu_petty_cash_analysis" name="Transaction Analysis" parent="menu_petty_cash_reporting" action="action_petty_cash_analysis" sequence="10" />
   <menuitem id="menu_petty_cash_periods" name="Periods &amp; Statements" parent="menu_petty_cash_reporting" action="action_petty_cash_period" sequence="20" />
   <menuitem id="menu_petty_cash_configuration" name="Configuration" parent="menu_petty_cash_root" sequence="50" groups="account.group_account_manager" />
-  <menuitem id="menu_petty_cash_funds" name="Funds" parent="menu_petty_cash_root" action="action_petty_cash_fund" sequence="25" />
+  <menuitem id="menu_petty_cash_funds" name="Funds" parent="menu_petty_cash_root" action="action_petty_cash_fund" sequence="25" groups="account.group_account_manager" />
   <menuitem id="menu_petty_cash_categories" name="Expense Categories" parent="menu_petty_cash_configuration" action="action_petty_cash_category" sequence="20" />
   <record id="menu_petty_cash_root" model="ir.ui.menu">
     <field name="group_ids" eval="[Command.set([ref('base.group_user')])]" />
@@ -55,7 +55,7 @@
     <field name="group_ids" eval="[Command.set([ref('account.group_account_manager')])]" />
   </record>
   <record id="menu_petty_cash_funds" model="ir.ui.menu">
-    <field name="group_ids" eval="[Command.clear()]" />
+    <field name="group_ids" eval="[Command.set([ref('account.group_account_manager')])]" />
   </record>
   <record id="menu_petty_cash_categories" model="ir.ui.menu">
     <field name="group_ids" eval="[Command.clear()]" />

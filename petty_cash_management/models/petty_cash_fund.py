@@ -26,8 +26,8 @@ class PettyCashFund(models.Model):
         default=lambda self: self.env.company.currency_id,
         tracking=True,
     )
-    maximum_cash_limit = fields.Monetary(required=True, tracking=True)
-    minimum_balance = fields.Monetary(required=True, tracking=True)
+    maximum_cash_limit = fields.Monetary(required=True, tracking=True, groups="account.group_account_manager")
+    minimum_balance = fields.Monetary(required=True, tracking=True, groups="account.group_account_manager")
     journal_id = fields.Many2one(
         "account.journal", required=True,
         domain="[('company_id', '=', company_id), ('type', 'in', ('cash', 'general'))]",
@@ -49,9 +49,9 @@ class PettyCashFund(models.Model):
     )
     transaction_ids = fields.One2many("petty.cash.transaction", "fund_id")
     period_ids = fields.One2many("petty.cash.period", "fund_id")
-    current_balance = fields.Monetary(compute="_compute_balances", compute_sudo=True)
-    current_month_receipts = fields.Monetary(compute="_compute_balances", compute_sudo=True)
-    current_month_expenses = fields.Monetary(compute="_compute_balances", compute_sudo=True)
+    current_balance = fields.Monetary(compute="_compute_balances", compute_sudo=True, groups="account.group_account_manager")
+    current_month_receipts = fields.Monetary(compute="_compute_balances", compute_sudo=True, groups="account.group_account_manager")
+    current_month_expenses = fields.Monetary(compute="_compute_balances", compute_sudo=True, groups="account.group_account_manager")
     below_minimum = fields.Boolean(compute="_compute_balances", compute_sudo=True, search="_search_below_minimum")
     transaction_count = fields.Integer(compute="_compute_transaction_count")
 

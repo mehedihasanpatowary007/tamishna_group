@@ -49,7 +49,9 @@ class PettyCashTransaction(models.Model):
         "res.users", string="Requested By", required=True,
         default=lambda self: self.env.user, readonly=True, copy=False,
     )
-    available_balance = fields.Monetary(related="fund_id.current_balance", string="Available Cash")
+    available_balance = fields.Monetary(
+        related="fund_id.current_balance", string="Available Cash", groups="account.group_account_manager",
+    )
     attachment_ids = fields.Many2many(
         "ir.attachment", "petty_cash_transaction_attachment_rel", "transaction_id", "attachment_id",
         string="Supporting Documents",

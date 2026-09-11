@@ -23,11 +23,11 @@ class PettyCashPeriod(models.Model):
         default="draft", required=True, tracking=True, copy=False,
     )
     transaction_ids = fields.One2many("petty.cash.transaction", "period_id")
-    opening_balance = fields.Monetary(readonly=True, tracking=True, copy=False)
+    opening_balance = fields.Monetary(readonly=True, tracking=True, copy=False, groups="account.group_account_manager")
     opening_balance_confirmed = fields.Boolean(readonly=True, copy=False)
-    total_received = fields.Monetary(compute="_compute_totals", store=True)
-    total_paid = fields.Monetary(compute="_compute_totals", store=True)
-    closing_balance = fields.Monetary(compute="_compute_totals", store=True)
+    total_received = fields.Monetary(compute="_compute_totals", store=True, groups="account.group_account_manager")
+    total_paid = fields.Monetary(compute="_compute_totals", store=True, groups="account.group_account_manager")
+    closing_balance = fields.Monetary(compute="_compute_totals", store=True, groups="account.group_account_manager")
     reconciled = fields.Boolean(tracking=True)
     closed_by_id = fields.Many2one("res.users", readonly=True, tracking=True, copy=False)
     closed_at = fields.Datetime(readonly=True, tracking=True, copy=False)
@@ -102,6 +102,7 @@ class PettyCashPeriod(models.Model):
 
     def action_print_statement(self):
         self.ensure_one()
+        self._check_finance_manager()
         return self.env.ref("petty_cash_management.action_report_petty_cash_statement").report_action(self)
 
     def _check_finance_manager(self):

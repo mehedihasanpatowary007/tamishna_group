@@ -140,7 +140,8 @@ class TestPettyCash(TransactionCase):
         self.assertEqual(admin_request.move_id.petty_cash_transaction_id, admin_request)
         self.assertEqual(self.fund.current_balance, 4000)
         self.assertEqual(admin_request.finance_approved_by_id, administrator)
-        self.assertEqual(self.fund.with_user(user).current_balance, 4000)
+        with self.assertRaises(AccessError):
+            self.fund.with_user(user).read(["current_balance"])
         with self.assertRaises(UserError):
             admin_request.action_approve()
         self.assertEqual(self.env["account.move"].search_count([
@@ -343,3 +344,27 @@ class TestPettyCash(TransactionCase):
         for xmlid in ("menu_petty_cash_receipts", "menu_petty_cash_replenishments", "menu_petty_cash_transactions"):
             self.assertNotIn(self.env.ref("petty_cash_management." + xmlid).id, visible)
         self.assertIn(self.env.ref("petty_cash_management.menu_petty_cash_my_requests").id, visible)
+
+    def test_normal_user_can_select_fund_but_cannot_read_balances(self):
+        user = self._normal_user("petty.fund.selection")
+        visible = self.env["ir.ui.menu"].with_user(user)._visible_menu_ids()
+        self.assertNotIn(self.env.ref("petty_cash_management.menu_petty_cash_funds").id, visible)
+        fund = self.fund.with_user(user)
+        self.assertEqual(fund.read(["name", "company_id"])[0]["name"], self.fund.name)
+        for field_name in (
+            "current_balance", "current_month_receipts", "current_month_expenses",
+            "maximum_cash_limit", "minimum_balance",
+        ):
+            with self.subTest(field_name=field_name), self.assertRaises(AccessError):
+                fund.read([field_name])
+        request = self._user_request(user)
+        request.action_submit()
+        self.assertEqual(request.state, "finance")
+        with self.assertRaises(AccessError):
+            request.read(["available_balance"])
+        with self.assertRaises(AccessError):
+            self.period.with_user(user).read(["closing_balance"])
+        self.assertIn(
+            self.env.ref("petty_cash_management.menu_petty_cash_funds").id,
+            self.env["ir.ui.menu"]._visible_menu_ids(),
+        )

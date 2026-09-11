@@ -6,21 +6,21 @@ A simple petty cash application with one approval step:
 
 ## Who does what
 
-- **Internal users:** create and submit only their own expense requests without Accounting or HR access. They can see their own requests, company funds and available balances, attach receipts, and correct returned requests.
+- **Internal users:** create and submit only their own expense requests without Accounting or HR access. They can see their own requests, select a company fund on the expense form, attach receipts, and correct returned requests.
 - **Accounting Administrators:** manage opening balances, cash receipts and replenishments; see all requests in their allowed companies, configure funds/categories/periods, return or reject requests with a reason, and use **Approve & Post** to create and post the journal entry immediately.
 
 Approval uses Odoo's standard `account.group_account_manager` (Accounting / Administrator). No separate petty cash privileges or manager threshold are required. Existing custom petty cash roles no longer grant approval or configuration rights.
 
-Cash Receipts, Replenishments and All Transactions menus are restricted to Accounting Administrators. The same restriction applies to direct API calls, imports, default transaction types and changes to existing requests. Any incoming-cash records created by ordinary users before this upgrade remain available to administrators.
+Funds, Cash Receipts, Replenishments and All Transactions menus are restricted to Accounting Administrators. The same restriction applies to direct API calls, imports, default transaction types and changes to existing requests. Any incoming-cash records created by ordinary users before this upgrade remain available to administrators.
 
 ## Screens
 
 - **My Requests:** a status board with amounts, fund, requester and date; list view is also available.
 - **Pending Approvals:** the administrator's queue, with one-click approval on forms and batch approval from the list.
-- **Funds:** available cash and monthly totals, visible to internal users within their allowed companies.
+- **Funds:** configuration, available cash and monthly totals for Accounting Administrators only. Normal users retain fund-name lookup for submitting expenses; they cannot open fund details from the request form or read fund balances.
 - **Dashboard and Reporting:** company/currency totals, analysis and PDF period statements for Accounting Administrators.
 
-Forms show available cash, clear workflow messages and reviewer notes. Ledger fields and optional employee details are visible only to Accounting Administrators. The requester is recorded automatically and the matching open period is selected when the fund/date changes.
+Forms show clear workflow messages and reviewer notes. Available cash is shown only to Accounting Administrators. Ledger fields and optional employee details are visible only to Accounting Administrators. The requester is recorded automatically and the matching open period is selected when the fund/date changes.
 
 ## Company selection
 
@@ -41,7 +41,7 @@ Normal users do not need to select a ledger account or employee to submit. Requi
 
 ## Upgrade on Odoo.sh
 
-Push the changes to the connected branch and upgrade **Petty Cash Management** in Apps. Version: `19.0.2.0.2`.
+Push the changes to the connected branch and upgrade **Petty Cash Management** in Apps. Version: `19.0.2.0.3`.
 
 The upgrade moves old manager-pending and approved-but-unposted requests into Pending Approval, preserves existing audit history and journal links, and restores request ownership from the original creator. It does not post entries automatically. Assign Accounting / Administrator to the people who should approve; old petty cash manager membership alone is insufficient.
 
