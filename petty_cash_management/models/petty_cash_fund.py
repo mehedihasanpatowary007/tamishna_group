@@ -7,6 +7,7 @@ class PettyCashFund(models.Model):
     _description = "Petty Cash Fund"
     _inherit = ["mail.thread", "mail.activity.mixin"]
     _order = "company_id, name"
+    _check_company_auto = True
 
     name = fields.Char(required=True, tracking=True)
     code = fields.Char(required=True, tracking=True)
@@ -36,6 +37,11 @@ class PettyCashFund(models.Model):
         "account.account", string="Petty Cash Account", required=True,
         domain="[('company_ids', 'in', company_id)]", check_company=True, tracking=True,
     )
+    source_account_id = fields.Many2one(
+        "account.account", string="Default Source Account", check_company=True,
+        domain="[('company_ids', 'in', company_id)]",
+        help="Credit account used when approving opening balances, receipts and replenishments.",
+    )
     manager_approval_required = fields.Boolean(default=True, tracking=True)
     manager_approval_threshold = fields.Monetary(
         help="Manager approval is required at or above this amount. Zero means all expenses.",
@@ -43,10 +49,10 @@ class PettyCashFund(models.Model):
     )
     transaction_ids = fields.One2many("petty.cash.transaction", "fund_id")
     period_ids = fields.One2many("petty.cash.period", "fund_id")
-    current_balance = fields.Monetary(compute="_compute_balances")
-    current_month_receipts = fields.Monetary(compute="_compute_balances")
-    current_month_expenses = fields.Monetary(compute="_compute_balances")
-    below_minimum = fields.Boolean(compute="_compute_balances", search="_search_below_minimum")
+    current_balance = fields.Monetary(compute="_compute_balances", compute_sudo=True)
+    current_month_receipts = fields.Monetary(compute="_compute_balances", compute_sudo=True)
+    current_month_expenses = fields.Monetary(compute="_compute_balances", compute_sudo=True)
+    below_minimum = fields.Boolean(compute="_compute_balances", compute_sudo=True, search="_search_below_minimum")
     transaction_count = fields.Integer(compute="_compute_transaction_count")
 
     _code_company_unique = models.Constraint(
@@ -63,7 +69,7 @@ class PettyCashFund(models.Model):
         for fund in self:
             posted = fund.transaction_ids.filtered(lambda transaction: transaction.state == "posted")
             fund.current_balance = sum(posted.mapped("signed_amount"))
-            this_month = posted.filtered(lambda transaction: transaction.date >= month_start)
+            this_month = posted.filtered(lambda transaction: transaction.date.replace(day=1) == month_start)
             fund.current_month_receipts = sum(
                 this_month.filtered(
                     lambda transaction: transaction.transaction_type in ("receipt", "replenishment")
@@ -94,6 +100,7 @@ class PettyCashFund(models.Model):
         self.currency_id = self.company_id.currency_id
         self.journal_id = False
         self.account_id = False
+        self.source_account_id = False
 
     def action_view_transactions(self):
         self.ensure_one()
@@ -101,5 +108,15 @@ class PettyCashFund(models.Model):
             "petty_cash_management.action_petty_cash_transaction"
         )
         action["domain"] = [("fund_id", "=", self.id)]
-        action["context"] = {"default_fund_id": self.id, "default_company_id": self.company_id.id}
+        action["context"] = dict(self.env.context, default_fund_id=self.id, default_company_id=self.company_id.id)
         return action
+
+    def action_new_request(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window", "name": _("New Petty Cash Request"),
+            "res_model": "petty.cash.transaction", "view_mode": "form",
+            "target": "current", "context": dict(
+                self.env.context, default_fund_id=self.id, default_company_id=self.company_id.id,
+            ),
+        }

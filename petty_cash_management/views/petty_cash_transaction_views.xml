@@ -1,226 +1,241 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_petty_cash_transaction_search" model="ir.ui.view">
-        <field name="name">petty.cash.transaction.search</field>
-        <field name="model">petty.cash.transaction</field>
-        <field name="arch" type="xml">
-            <search string="Petty Cash Transactions">
-                <field name="name"/>
-                <field name="reference"/>
-                <field name="description"/>
-                <field name="fund_id"/>
-                <field name="category_id"/>
-                <field name="department_id"/>
-                <field name="requester_id"/>
-                <field name="custodian_id"/>
-                <field name="company_id"/>
-                <filter name="my_funds" string="My Funds" domain="[('custodian_id', '=', uid)]"/>
-                <filter name="pending" string="Pending Approvals" domain="[('state', 'in', ('manager', 'finance'))]"/>
-                <filter name="manager_pending" string="Manager Approval" domain="[('state', '=', 'manager')]"/>
-                <filter name="finance_pending" string="Finance Approval" domain="[('state', '=', 'finance')]"/>
-                <filter name="posted" string="Posted" domain="[('state', '=', 'posted')]"/>
-                <separator/>
-                <filter name="transaction_date" string="Transaction Date" date="date"/>
-                <group name="group_by">
-                    <filter name="group_type" string="Type" context="{'group_by': 'transaction_type'}"/>
-                    <filter name="group_fund" string="Fund" context="{'group_by': 'fund_id'}"/>
-                    <filter name="group_category" string="Expense Category" context="{'group_by': 'category_id'}"/>
-                    <filter name="group_department" string="Department" context="{'group_by': 'department_id'}"/>
-                    <filter name="group_custodian" string="Custodian" context="{'group_by': 'custodian_id'}"/>
-                    <filter name="group_company" string="Company" context="{'group_by': 'company_id'}"/>
-                    <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
-                    <filter name="group_month" string="Month" context="{'group_by': 'date:month'}"/>
-                </group>
-            </search>
-        </field>
-    </record>
-
-    <record id="view_petty_cash_transaction_list" model="ir.ui.view">
-        <field name="name">petty.cash.transaction.list</field>
-        <field name="model">petty.cash.transaction</field>
-        <field name="arch" type="xml">
-            <list decoration-success="state == 'posted'" decoration-danger="state == 'rejected'" decoration-warning="state == 'returned'">
-                <field name="date"/>
-                <field name="name"/>
-                <field name="transaction_type"/>
-                <field name="fund_id"/>
-                <field name="company_id" groups="base.group_multi_company" optional="show"/>
-                <field name="description" optional="show"/>
-                <field name="category_id" optional="show"/>
-                <field name="department_id" optional="hide"/>
-                <field name="requester_id" optional="hide"/>
-                <field name="custodian_id" optional="show"/>
-                <field name="amount" sum="Total"/>
-                <field name="running_balance" optional="show"/>
-                <field name="currency_id" column_invisible="True"/>
-                <field name="state" widget="badge" decoration-success="state == 'posted'" decoration-info="state in ('manager', 'finance')" decoration-danger="state == 'rejected'" decoration-warning="state == 'returned'"/>
-            </list>
-        </field>
-    </record>
-
-    <record id="view_petty_cash_transaction_form" model="ir.ui.view">
-        <field name="name">petty.cash.transaction.form</field>
-        <field name="model">petty.cash.transaction</field>
-        <field name="arch" type="xml">
-            <form string="Petty Cash Transaction">
-                <header>
-                    <button name="action_submit" string="Submit" type="object" class="btn-primary" invisible="state not in ('draft', 'returned')"/>
-                    <button name="action_manager_approve" string="Manager Approve" type="object" class="btn-primary" invisible="state != 'manager'" groups="petty_cash_management.group_petty_cash_department_manager"/>
-                    <button name="action_finance_approve" string="Finance Approve" type="object" class="btn-primary" invisible="state != 'finance'" groups="petty_cash_management.group_petty_cash_finance_manager"/>
-                    <button name="action_post" string="Post Journal Entry" type="object" class="btn-primary" invisible="state != 'approved'" groups="petty_cash_management.group_petty_cash_finance_manager"/>
-                    <button name="action_return" string="Return" type="object" invisible="state not in ('manager', 'finance')" groups="petty_cash_management.group_petty_cash_department_manager,petty_cash_management.group_petty_cash_finance_manager"/>
-                    <button name="action_reject" string="Reject" type="object" invisible="state not in ('manager', 'finance')" groups="petty_cash_management.group_petty_cash_department_manager,petty_cash_management.group_petty_cash_finance_manager"/>
-                    <button name="action_cancel" string="Cancel" type="object" invisible="state in ('posted', 'cancelled')"/>
-                    <button name="action_reset_draft" string="Reset to Draft" type="object" invisible="state not in ('rejected', 'cancelled')"/>
-                    <field name="state" widget="statusbar" statusbar_visible="draft,manager,finance,approved,posted"/>
-                </header>
-                <sheet>
-                    <div class="oe_title"><label for="name"/><h1><field name="name"/></h1></div>
-                    <group>
-                        <group>
-                            <field name="transaction_type" readonly="state not in ('draft', 'returned')"/>
-                            <field name="date" readonly="state not in ('draft', 'returned')"/>
-                            <field name="fund_id" readonly="state not in ('draft', 'returned')"/>
-                            <field name="company_id" groups="base.group_multi_company" readonly="1"/>
-                            <field name="period_id" domain="[('fund_id', '=', fund_id), ('state', '=', 'open')]" readonly="state not in ('draft', 'returned')"/>
-                            <field name="custodian_id" readonly="1"/>
-                        </group>
-                        <group>
-                            <field name="amount" readonly="state not in ('draft', 'returned')"/>
-                            <field name="currency_id" invisible="1"/>
-                            <field name="reference" readonly="state == 'posted'"/>
-                            <field name="receipt_type" invisible="transaction_type not in ('receipt', 'replenishment')" required="transaction_type in ('receipt', 'replenishment')" readonly="state not in ('draft', 'returned')"/>
-                            <field name="source" invisible="transaction_type not in ('receipt', 'replenishment')" readonly="state not in ('draft', 'returned')"/>
-                            <field name="counterpart_account_id" invisible="transaction_type == 'expense'" required="transaction_type != 'expense'" readonly="state not in ('draft', 'returned')"/>
-                            <field name="move_id" invisible="not move_id"/>
-                        </group>
-                    </group>
-                    <group string="Expense Details" invisible="transaction_type != 'expense'">
-                        <group>
-                            <field name="category_id" required="transaction_type == 'expense'" readonly="state not in ('draft', 'returned')"/>
-                            <field name="department_id" readonly="state not in ('draft', 'returned')"/>
-                        </group>
-                        <group>
-                            <field name="requester_id" required="transaction_type == 'expense'" readonly="state not in ('draft', 'returned')"/>
-                        </group>
-                    </group>
-                    <group>
-                        <field name="description" readonly="state not in ('draft', 'returned')"/>
-                        <field name="attachment_ids" widget="many2many_binary" readonly="state == 'posted'"/>
-                    </group>
-                    <notebook>
-                        <page string="Approval Audit">
-                            <group>
-                                <group>
-                                    <field name="create_uid" string="Created By"/>
-                                    <field name="create_date" string="Created At"/>
-                                    <field name="submitted_by_id"/>
-                                    <field name="submitted_at"/>
-                                    <field name="manager_approved_by_id"/>
-                                    <field name="manager_approved_at"/>
-                                </group>
-                                <group>
-                                    <field name="finance_approved_by_id"/>
-                                    <field name="finance_approved_at"/>
-                                    <field name="posted_by_id"/>
-                                    <field name="posted_at"/>
-                                    <field name="decision_by_id"/>
-                                    <field name="decision_at"/>
-                                </group>
-                            </group>
-                            <field name="decision_reason" invisible="not decision_reason"/>
-                        </page>
-                    </notebook>
-                </sheet>
-                <chatter/>
-            </form>
-        </field>
-    </record>
-
-    <record id="view_petty_cash_transaction_graph" model="ir.ui.view">
-        <field name="name">petty.cash.transaction.graph</field>
-        <field name="model">petty.cash.transaction</field>
-        <field name="arch" type="xml">
-            <graph string="Petty Cash Analysis" type="bar" sample="1">
-                <field name="date" interval="month"/>
-                <field name="transaction_type"/>
-                <field name="amount" type="measure"/>
-            </graph>
-        </field>
-    </record>
-    <record id="view_petty_cash_transaction_pivot" model="ir.ui.view">
-        <field name="name">petty.cash.transaction.pivot</field>
-        <field name="model">petty.cash.transaction</field>
-        <field name="arch" type="xml">
-            <pivot string="Petty Cash Analysis" sample="1">
-                <field name="fund_id" type="row"/>
-                <field name="transaction_type" type="col"/>
-                <field name="amount" type="measure"/>
-            </pivot>
-        </field>
-    </record>
-
-    <record id="view_petty_cash_decision_wizard_form" model="ir.ui.view">
-        <field name="name">petty.cash.decision.wizard.form</field>
-        <field name="model">petty.cash.decision.wizard</field>
-        <field name="arch" type="xml">
-            <form string="Approval Decision">
+  <record id="view_petty_cash_transaction_search" model="ir.ui.view">
+    <field name="name">petty.cash.transaction.search</field>
+    <field name="model">petty.cash.transaction</field>
+    <field name="arch" type="xml">
+      <search string="Petty Cash Transactions">
+        <field name="name" />
+        <field name="reference" />
+        <field name="description" />
+        <field name="fund_id" />
+        <field name="category_id" />
+        <field name="department_id" groups="account.group_account_manager" />
+        <field name="requester_id" groups="account.group_account_manager" />
+        <field name="custodian_id" />
+        <field name="requested_by_id" />
+        <field name="company_id" />
+        <filter name="my_requests" string="My Requests" domain="[('create_uid', '=', uid)]" />
+        <filter name="draft" string="Drafts" domain="[('state', '=', 'draft')]" />
+        <filter name="returned" string="Needs Correction" domain="[('state', '=', 'returned')]" />
+        <filter name="pending" string="Pending Approvals" domain="[('state', 'in', ('manager', 'finance', 'approved'))]" />
+        <filter name="posted" string="Posted" domain="[('state', '=', 'posted')]" />
+        <separator />
+        <filter name="transaction_date" string="Transaction Date" date="date" />
+        <group name="group_by">
+          <filter name="group_type" string="Type" context="{'group_by': 'transaction_type'}" />
+          <filter name="group_fund" string="Fund" context="{'group_by': 'fund_id'}" />
+          <filter name="group_category" string="Expense Category" context="{'group_by': 'category_id'}" />
+          <filter name="group_department" string="Department" context="{'group_by': 'department_id'}" />
+          <filter name="group_custodian" string="Custodian" context="{'group_by': 'custodian_id'}" />
+          <filter name="group_company" string="Company" context="{'group_by': 'company_id'}" />
+          <filter name="group_state" string="Status" context="{'group_by': 'state'}" />
+          <filter name="group_month" string="Month" context="{'group_by': 'date:month'}" />
+        </group>
+      </search>
+    </field>
+  </record>
+  <record id="view_petty_cash_transaction_list" model="ir.ui.view">
+    <field name="name">petty.cash.transaction.list</field>
+    <field name="model">petty.cash.transaction</field>
+    <field name="arch" type="xml">
+      <list decoration-success="state == 'posted'" decoration-danger="state == 'rejected'" decoration-warning="state == 'returned'">
+        <header>
+          <button name="action_approve" string="Approve &amp; Post" type="object" groups="account.group_account_manager" />
+        </header>
+        <field name="date" />
+        <field name="name" />
+        <field name="transaction_type" />
+        <field name="fund_id" />
+        <field name="company_id" groups="base.group_multi_company" optional="show" />
+        <field name="description" optional="show" />
+        <field name="requested_by_id" optional="show" />
+        <field name="category_id" optional="show" />
+        <field name="department_id" optional="hide" groups="account.group_account_manager" />
+        <field name="requester_id" optional="hide" groups="account.group_account_manager" />
+        <field name="custodian_id" optional="show" />
+        <field name="amount" sum="Total" />
+        <field name="running_balance" optional="hide" groups="account.group_account_manager" />
+        <field name="currency_id" column_invisible="True" />
+        <field name="state" widget="badge" decoration-success="state == 'posted'" decoration-info="state in ('manager', 'finance', 'approved')" decoration-danger="state == 'rejected'" decoration-warning="state == 'returned'" />
+      </list>
+    </field>
+  </record>
+  <record id="view_petty_cash_transaction_form" model="ir.ui.view">
+    <field name="name">petty.cash.transaction.form</field>
+    <field name="model">petty.cash.transaction</field>
+    <field name="arch" type="xml">
+      <form string="Petty Cash Transaction">
+        <header>
+          <button name="action_submit" string="Submit" type="object" class="btn-primary" invisible="state not in ('draft', 'returned')" />
+          <button name="action_approve" string="Approve &amp; Post" type="object" class="btn-primary" invisible="state not in ('finance', 'manager', 'approved')" groups="account.group_account_manager" />
+          <button name="action_return" string="Return" type="object" invisible="state not in ('manager', 'finance', 'approved')" groups="account.group_account_manager" />
+          <button name="action_reject" string="Reject" type="object" invisible="state not in ('manager', 'finance', 'approved')" groups="account.group_account_manager" />
+          <button name="action_cancel" string="Cancel" type="object" invisible="state in ('posted', 'cancelled')" />
+          <button name="action_reset_draft" string="Reset to Draft" type="object" invisible="state not in ('rejected', 'cancelled')" />
+          <field name="state" widget="statusbar" statusbar_visible="draft,finance,posted" />
+        </header>
+        <sheet>
+          <div class="alert alert-info" role="status" invisible="state != 'draft'">
+            Add the details and receipt, then submit. Your Accounting Administrator will approve and post the entry.
+          </div>
+          <div class="alert alert-info" role="status" invisible="state not in ('finance', 'manager', 'approved')">
+            Awaiting approval. Approve &amp; Post records this request in the accounts in one step.
+          </div>
+          <div class="alert alert-success" role="status" invisible="state != 'posted'">
+            Approved and posted. The fund balance has been updated.
+          </div>
+          <div class="alert alert-warning" role="status" invisible="state not in ('returned', 'rejected')">
+            <strong>Reviewer's note:</strong> <field name="decision_reason" nolabel="1" />
+          </div>
+          <div class="oe_title">
+            <label for="name" />
+            <h1>
+              <field name="name" />
+            </h1>
+          </div>
+          <group>
+            <group>
+              <field name="transaction_type" readonly="state not in ('draft', 'returned')" />
+              <field name="date" readonly="state not in ('draft', 'returned')" />
+              <field name="fund_id" readonly="state not in ('draft', 'returned')" />
+              <field name="company_id" groups="base.group_multi_company" readonly="1" />
+              <field name="period_id" domain="[('fund_id', '=', fund_id), ('state', '=', 'open')]" readonly="state not in ('draft', 'returned')" />
+              <field name="custodian_id" readonly="1" />
+              <field name="requested_by_id" widget="many2one_avatar_user" />
+            </group>
+            <group>
+              <field name="amount" readonly="state not in ('draft', 'returned')" />
+              <field name="available_balance" readonly="1" />
+              <field name="currency_id" invisible="1" />
+              <field name="reference" readonly="state not in ('draft', 'returned')" />
+              <field name="receipt_type" invisible="transaction_type not in ('receipt', 'replenishment')" required="transaction_type in ('receipt', 'replenishment')" readonly="state not in ('draft', 'returned')" />
+              <field name="source" invisible="transaction_type not in ('receipt', 'replenishment')" readonly="state not in ('draft', 'returned')" />
+              <field name="counterpart_account_id" invisible="transaction_type == 'expense'" readonly="state not in ('draft', 'returned')" groups="account.group_account_manager" />
+              <field name="move_id" invisible="not move_id" groups="account.group_account_manager" />
+            </group>
+          </group>
+          <group string="Expense Details" invisible="transaction_type != 'expense'">
+            <group>
+              <field name="category_id" options="{'no_create': True, 'no_open': True}" required="transaction_type == 'expense'" readonly="state not in ('draft', 'returned')" />
+              <field name="department_id" readonly="state not in ('draft', 'returned')" groups="account.group_account_manager" />
+            </group>
+            <group>
+              <field name="requester_id" readonly="state not in ('draft', 'returned')" groups="account.group_account_manager" />
+            </group>
+          </group>
+          <group>
+            <field name="description" readonly="state not in ('draft', 'returned')" />
+            <field name="attachment_ids" widget="many2many_binary" readonly="state not in ('draft', 'returned')" />
+          </group>
+          <notebook>
+            <page string="Approval Audit">
+              <group>
                 <group>
-                    <field name="transaction_ids" widget="many2many_tags" readonly="1"/>
-                    <field name="decision" readonly="1"/>
-                    <field name="reason" placeholder="Explain the reason for this decision..."/>
+                  <field name="create_uid" string="Created By" />
+                  <field name="create_date" string="Created At" />
+                  <field name="submitted_by_id" />
+                  <field name="submitted_at" />
                 </group>
-                <footer>
-                    <button name="action_confirm" string="Confirm" type="object" class="btn-primary"/>
-                    <button string="Cancel" special="cancel" class="btn-secondary"/>
-                </footer>
-            </form>
-        </field>
-    </record>
-
-    <record id="action_petty_cash_transaction" model="ir.actions.act_window">
-        <field name="name">All Transactions</field>
-        <field name="res_model">petty.cash.transaction</field>
-        <field name="view_mode">list,form,graph,pivot</field>
-        <field name="search_view_id" ref="view_petty_cash_transaction_search"/>
-    </record>
-    <record id="action_petty_cash_expense" model="ir.actions.act_window">
-        <field name="name">Expenses</field>
-        <field name="res_model">petty.cash.transaction</field>
-        <field name="view_mode">list,form,graph,pivot</field>
-        <field name="domain">[('transaction_type', '=', 'expense')]</field>
-        <field name="context">{'default_transaction_type': 'expense'}</field>
-        <field name="search_view_id" ref="view_petty_cash_transaction_search"/>
-    </record>
-    <record id="action_petty_cash_receipt" model="ir.actions.act_window">
-        <field name="name">Cash Receipts</field>
-        <field name="res_model">petty.cash.transaction</field>
-        <field name="view_mode">list,form,graph,pivot</field>
-        <field name="domain">[('transaction_type', 'in', ('opening', 'receipt'))]</field>
-        <field name="context">{'default_transaction_type': 'receipt'}</field>
-        <field name="search_view_id" ref="view_petty_cash_transaction_search"/>
-    </record>
-    <record id="action_petty_cash_replenishment" model="ir.actions.act_window">
-        <field name="name">Replenishments</field>
-        <field name="res_model">petty.cash.transaction</field>
-        <field name="view_mode">list,form</field>
-        <field name="domain">[('transaction_type', '=', 'replenishment')]</field>
-        <field name="context">{'default_transaction_type': 'replenishment'}</field>
-        <field name="search_view_id" ref="view_petty_cash_transaction_search"/>
-    </record>
-    <record id="action_petty_cash_approval" model="ir.actions.act_window">
-        <field name="name">Pending Approvals</field>
-        <field name="res_model">petty.cash.transaction</field>
-        <field name="view_mode">list,form</field>
-        <field name="domain">[('state', 'in', ('manager', 'finance'))]</field>
-        <field name="context">{'search_default_pending': 1}</field>
-        <field name="search_view_id" ref="view_petty_cash_transaction_search"/>
-    </record>
-    <record id="action_petty_cash_analysis" model="ir.actions.act_window">
-        <field name="name">Analysis</field>
-        <field name="res_model">petty.cash.transaction</field>
-        <field name="view_mode">graph,pivot,list</field>
-        <field name="domain">[('state', '=', 'posted')]</field>
-        <field name="search_view_id" ref="view_petty_cash_transaction_search"/>
-    </record>
+                <group>
+                  <field name="finance_approved_by_id" string="Approved By" />
+                  <field name="finance_approved_at" string="Approved At" />
+                  <field name="posted_by_id" />
+                  <field name="posted_at" />
+                  <field name="decision_by_id" />
+                  <field name="decision_at" />
+                </group>
+              </group>
+              <field name="decision_reason" invisible="not decision_reason" />
+            </page>
+          </notebook>
+        </sheet>
+        <chatter />
+      </form>
+    </field>
+  </record>
+  <record id="view_petty_cash_transaction_graph" model="ir.ui.view">
+    <field name="name">petty.cash.transaction.graph</field>
+    <field name="model">petty.cash.transaction</field>
+    <field name="arch" type="xml">
+      <graph string="Petty Cash Analysis" type="bar" sample="1">
+        <field name="date" interval="month" />
+        <field name="transaction_type" />
+        <field name="amount" type="measure" />
+      </graph>
+    </field>
+  </record>
+  <record id="view_petty_cash_transaction_pivot" model="ir.ui.view">
+    <field name="name">petty.cash.transaction.pivot</field>
+    <field name="model">petty.cash.transaction</field>
+    <field name="arch" type="xml">
+      <pivot string="Petty Cash Analysis" sample="1">
+        <field name="fund_id" type="row" />
+        <field name="transaction_type" type="col" />
+        <field name="amount" type="measure" />
+      </pivot>
+    </field>
+  </record>
+  <record id="view_petty_cash_decision_wizard_form" model="ir.ui.view">
+    <field name="name">petty.cash.decision.wizard.form</field>
+    <field name="model">petty.cash.decision.wizard</field>
+    <field name="arch" type="xml">
+      <form string="Approval Decision">
+        <group>
+          <field name="transaction_ids" widget="many2many_tags" readonly="1" />
+          <field name="decision" readonly="1" />
+          <field name="reason" placeholder="Explain the reason for this decision..." />
+        </group>
+        <footer>
+          <button name="action_confirm" string="Confirm" type="object" class="btn-primary" />
+          <button string="Cancel" special="cancel" class="btn-secondary" />
+        </footer>
+      </form>
+    </field>
+  </record>
+  <record id="action_petty_cash_transaction" model="ir.actions.act_window">
+    <field name="name">All Transactions</field>
+    <field name="res_model">petty.cash.transaction</field>
+    <field name="view_mode">list,form,graph,pivot</field>
+    <field name="search_view_id" ref="view_petty_cash_transaction_search" />
+  </record>
+  <record id="action_petty_cash_expense" model="ir.actions.act_window">
+    <field name="name">Expenses</field>
+    <field name="res_model">petty.cash.transaction</field>
+    <field name="view_mode">list,form,graph,pivot</field>
+    <field name="domain">[('transaction_type', '=', 'expense')]</field>
+    <field name="context">{'default_transaction_type': 'expense'}</field>
+    <field name="search_view_id" ref="view_petty_cash_transaction_search" />
+  </record>
+  <record id="action_petty_cash_receipt" model="ir.actions.act_window">
+    <field name="name">Cash Receipts</field>
+    <field name="res_model">petty.cash.transaction</field>
+    <field name="view_mode">list,form,graph,pivot</field>
+    <field name="domain">[('transaction_type', 'in', ('opening', 'receipt'))]</field>
+    <field name="context">{'default_transaction_type': 'receipt'}</field>
+    <field name="search_view_id" ref="view_petty_cash_transaction_search" />
+  </record>
+  <record id="action_petty_cash_replenishment" model="ir.actions.act_window">
+    <field name="name">Replenishments</field>
+    <field name="res_model">petty.cash.transaction</field>
+    <field name="view_mode">list,form</field>
+    <field name="domain">[('transaction_type', '=', 'replenishment')]</field>
+    <field name="context">{'default_transaction_type': 'replenishment'}</field>
+    <field name="search_view_id" ref="view_petty_cash_transaction_search" />
+  </record>
+  <record id="action_petty_cash_approval" model="ir.actions.act_window">
+    <field name="name">Pending Approvals</field>
+    <field name="res_model">petty.cash.transaction</field>
+    <field name="view_mode">list,form</field>
+    <field name="domain">[('state', 'in', ('manager', 'finance', 'approved'))]</field>
+    <field name="context">{'search_default_pending': 1}</field>
+    <field name="search_view_id" ref="view_petty_cash_transaction_search" />
+  </record>
+  <record id="action_petty_cash_analysis" model="ir.actions.act_window">
+    <field name="name">Analysis</field>
+    <field name="res_model">petty.cash.transaction</field>
+    <field name="view_mode">graph,pivot,list</field>
+    <field name="domain">[('state', '=', 'posted')]</field>
+    <field name="search_view_id" ref="view_petty_cash_transaction_search" />
+  </record>
 </odoo>

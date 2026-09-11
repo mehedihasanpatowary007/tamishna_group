@@ -1,136 +1,152 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_petty_cash_fund_search" model="ir.ui.view">
-        <field name="name">petty.cash.fund.search</field>
-        <field name="model">petty.cash.fund</field>
-        <field name="arch" type="xml">
-            <search string="Petty Cash Funds">
-                <field name="name"/>
-                <field name="code"/>
-                <field name="custodian_id"/>
-                <field name="company_id"/>
-                <filter name="below_minimum" string="Below Minimum" domain="[('below_minimum', '=', True)]"/>
-                <filter name="inactive" string="Inactive" domain="[('active', '=', False)]"/>
-                <group name="group_by">
-                    <filter name="group_company" string="Company" context="{'group_by': 'company_id'}"/>
-                    <filter name="group_custodian" string="Custodian" context="{'group_by': 'custodian_id'}"/>
-                    <filter name="group_branch" string="Branch / Location" context="{'group_by': 'branch'}"/>
-                </group>
-            </search>
-        </field>
-    </record>
-
-    <record id="view_petty_cash_fund_list" model="ir.ui.view">
-        <field name="name">petty.cash.fund.list</field>
-        <field name="model">petty.cash.fund</field>
-        <field name="arch" type="xml">
-            <list decoration-danger="below_minimum" decoration-muted="not active">
-                <field name="name"/>
-                <field name="code"/>
-                <field name="company_id" groups="base.group_multi_company"/>
-                <field name="branch" optional="show"/>
-                <field name="custodian_id"/>
-                <field name="current_balance" sum="Total Available"/>
-                <field name="minimum_balance" optional="show"/>
-                <field name="maximum_cash_limit" optional="show"/>
-                <field name="currency_id" column_invisible="True"/>
-                <field name="below_minimum" column_invisible="True"/>
-                <field name="active" column_invisible="True"/>
-            </list>
-        </field>
-    </record>
-
-    <record id="view_petty_cash_fund_kanban" model="ir.ui.view">
-        <field name="name">petty.cash.fund.kanban</field>
-        <field name="model">petty.cash.fund</field>
-        <field name="arch" type="xml">
-            <kanban class="o_kanban_dashboard" sample="1">
-                <field name="name"/>
-                <field name="code"/>
-                <field name="custodian_id"/>
-                <field name="currency_id"/>
-                <field name="current_balance"/>
-                <field name="minimum_balance"/>
-                <field name="maximum_cash_limit"/>
-                <field name="current_month_receipts"/>
-                <field name="current_month_expenses"/>
-                <field name="below_minimum"/>
-                <templates>
-                    <t t-name="card">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div><strong class="fs-5"><field name="name"/></strong><br/><span class="text-muted"><field name="code"/></span></div>
-                            <span t-if="record.below_minimum.raw_value" class="badge text-bg-danger">Below Minimum</span>
-                            <span t-else="" class="badge text-bg-success">Healthy</span>
-                        </div>
-                        <div class="mt-3">
-                            <div class="text-muted">Available Balance</div>
-                            <div class="fs-3"><field name="current_balance"/></div>
-                        </div>
-                        <div class="row mt-3">
-                            <div class="col-6"><span class="text-muted">Month In</span><br/><field name="current_month_receipts"/></div>
-                            <div class="col-6"><span class="text-muted">Month Out</span><br/><field name="current_month_expenses"/></div>
-                        </div>
-                        <div class="mt-3 text-muted">Custodian: <field name="custodian_id"/></div>
-                    </t>
-                </templates>
-            </kanban>
-        </field>
-    </record>
-
-    <record id="view_petty_cash_fund_form" model="ir.ui.view">
-        <field name="name">petty.cash.fund.form</field>
-        <field name="model">petty.cash.fund</field>
-        <field name="arch" type="xml">
-            <form string="Petty Cash Fund">
-                <sheet>
-                    <div class="oe_button_box" name="button_box">
-                        <button name="action_view_transactions" type="object" class="oe_stat_button" icon="fa-exchange">
-                            <field name="transaction_count" widget="statinfo" string="Transactions"/>
-                        </button>
-                    </div>
-                    <widget name="web_ribbon" title="Inactive" bg_color="text-bg-danger" invisible="active"/>
-                    <div class="oe_title"><label for="name"/><h1><field name="name" placeholder="e.g. Head Office Petty Cash"/></h1></div>
-                    <group>
-                        <group>
-                            <field name="code"/>
-                            <field name="company_id" groups="base.group_multi_company"/>
-                            <field name="branch"/>
-                            <field name="custodian_id"/>
-                            <field name="active"/>
-                        </group>
-                        <group>
-                            <field name="currency_id"/>
-                            <field name="maximum_cash_limit"/>
-                            <field name="minimum_balance"/>
-                            <field name="current_balance" readonly="1"/>
-                            <field name="below_minimum" readonly="1"/>
-                        </group>
-                    </group>
-                    <notebook>
-                        <page string="Accounting">
-                            <group>
-                                <field name="journal_id"/>
-                                <field name="account_id"/>
-                            </group>
-                        </page>
-                        <page string="Approval Policy">
-                            <group>
-                                <field name="manager_approval_required"/>
-                                <field name="manager_approval_threshold" invisible="not manager_approval_required"/>
-                            </group>
-                        </page>
-                    </notebook>
-                </sheet>
-                <chatter/>
-            </form>
-        </field>
-    </record>
-
-    <record id="action_petty_cash_fund" model="ir.actions.act_window">
-        <field name="name">Funds</field>
-        <field name="res_model">petty.cash.fund</field>
-        <field name="view_mode">kanban,list,form</field>
-        <field name="search_view_id" ref="view_petty_cash_fund_search"/>
-        <field name="context">{'search_default_group_company': 1}</field>
-    </record>
+  <record id="view_petty_cash_fund_search" model="ir.ui.view">
+    <field name="name">petty.cash.fund.search</field>
+    <field name="model">petty.cash.fund</field>
+    <field name="arch" type="xml">
+      <search string="Petty Cash Funds">
+        <field name="name" />
+        <field name="code" />
+        <field name="custodian_id" />
+        <field name="company_id" />
+        <filter name="below_minimum" string="Below Minimum" domain="[('below_minimum', '=', True)]" />
+        <filter name="inactive" string="Inactive" domain="[('active', '=', False)]" />
+        <group name="group_by">
+          <filter name="group_company" string="Company" context="{'group_by': 'company_id'}" />
+          <filter name="group_custodian" string="Custodian" context="{'group_by': 'custodian_id'}" />
+          <filter name="group_branch" string="Branch / Location" context="{'group_by': 'branch'}" />
+        </group>
+      </search>
+    </field>
+  </record>
+  <record id="view_petty_cash_fund_list" model="ir.ui.view">
+    <field name="name">petty.cash.fund.list</field>
+    <field name="model">petty.cash.fund</field>
+    <field name="arch" type="xml">
+      <list decoration-danger="below_minimum" decoration-muted="not active">
+        <field name="name" />
+        <field name="code" />
+        <field name="company_id" groups="base.group_multi_company" />
+        <field name="branch" optional="show" />
+        <field name="custodian_id" />
+        <field name="current_balance" sum="Total Available" />
+        <field name="minimum_balance" optional="show" />
+        <field name="maximum_cash_limit" optional="show" />
+        <field name="currency_id" column_invisible="True" />
+        <field name="below_minimum" column_invisible="True" />
+        <field name="active" column_invisible="True" />
+      </list>
+    </field>
+  </record>
+  <record id="view_petty_cash_fund_kanban" model="ir.ui.view">
+    <field name="name">petty.cash.fund.kanban</field>
+    <field name="model">petty.cash.fund</field>
+    <field name="arch" type="xml">
+      <kanban class="o_kanban_dashboard" sample="1">
+        <field name="name" />
+        <field name="code" />
+        <field name="custodian_id" />
+        <field name="currency_id" />
+        <field name="current_balance" />
+        <field name="minimum_balance" />
+        <field name="maximum_cash_limit" />
+        <field name="current_month_receipts" />
+        <field name="current_month_expenses" />
+        <field name="below_minimum" />
+        <templates>
+          <t t-name="card">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <strong class="fs-5">
+                  <field name="name" />
+                </strong>
+                <br />
+                <span class="text-muted">
+                  <field name="code" />
+                </span>
+              </div>
+              <span t-if="record.below_minimum.raw_value" class="badge text-bg-danger">Below Minimum</span>
+              <span t-else="" class="badge text-bg-success">Healthy</span>
+            </div>
+            <div class="mt-3">
+              <div class="text-muted">Available Balance</div>
+              <div class="fs-3">
+                <field name="current_balance" />
+              </div>
+            </div>
+            <div class="row mt-3">
+              <div class="col-6">
+                <span class="text-muted">Month In</span>
+                <br />
+                <field name="current_month_receipts" />
+              </div>
+              <div class="col-6">
+                <span class="text-muted">Month Out</span>
+                <br />
+                <field name="current_month_expenses" />
+              </div>
+            </div>
+            <div class="mt-2 text-muted" groups="base.group_multi_company"><field name="company_id" /></div>
+            <div class="mt-3 text-muted">Custodian: <field name="custodian_id" /></div>
+            <button name="action_new_request" type="object" class="btn btn-primary btn-sm mt-3">New Request</button>
+          </t>
+        </templates>
+      </kanban>
+    </field>
+  </record>
+  <record id="view_petty_cash_fund_form" model="ir.ui.view">
+    <field name="name">petty.cash.fund.form</field>
+    <field name="model">petty.cash.fund</field>
+    <field name="arch" type="xml">
+      <form string="Petty Cash Fund">
+        <sheet>
+          <div class="oe_button_box" name="button_box">
+            <button name="action_view_transactions" type="object" class="oe_stat_button" icon="fa-exchange">
+              <field name="transaction_count" widget="statinfo" string="Transactions" />
+            </button>
+          </div>
+          <widget name="web_ribbon" title="Inactive" bg_color="text-bg-danger" invisible="active" />
+          <div class="oe_title">
+            <label for="name" />
+            <h1>
+              <field name="name" placeholder="e.g. Head Office Petty Cash" />
+            </h1>
+          </div>
+          <group>
+            <group>
+              <field name="code" />
+              <field name="company_id" groups="base.group_multi_company" />
+              <field name="branch" />
+              <field name="custodian_id" />
+              <field name="active" />
+            </group>
+            <group>
+              <field name="currency_id" />
+              <field name="maximum_cash_limit" />
+              <field name="minimum_balance" />
+              <field name="current_balance" readonly="1" />
+              <field name="below_minimum" readonly="1" />
+            </group>
+          </group>
+          <notebook>
+            <page string="Accounting" groups="account.group_account_manager">
+              <group>
+                <field name="journal_id" />
+                <field name="account_id" />
+                <field name="source_account_id" />
+              </group>
+            </page>
+          </notebook>
+        </sheet>
+        <chatter />
+      </form>
+    </field>
+  </record>
+  <record id="action_petty_cash_fund" model="ir.actions.act_window">
+    <field name="name">Funds</field>
+    <field name="res_model">petty.cash.fund</field>
+    <field name="view_mode">kanban,list,form</field>
+    <field name="search_view_id" ref="view_petty_cash_fund_search" />
+    <field name="context">{'search_default_group_company': 1}</field>
+  </record>
 </odoo>

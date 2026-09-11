@@ -105,8 +105,8 @@ class PettyCashPeriod(models.Model):
         return self.env.ref("petty_cash_management.action_report_petty_cash_statement").report_action(self)
 
     def _check_finance_manager(self):
-        if not self.env.user.has_group("petty_cash_management.group_petty_cash_finance_manager"):
-            raise UserError(_("Only a Petty Cash Finance Manager can perform this action."))
+        if not self.env.user.has_group("account.group_account_manager"):
+            raise UserError(_("Only a Accounting Administrator can perform this action."))
 
     def unlink(self):
         if any(period.state != "draft" for period in self):
@@ -116,9 +116,9 @@ class PettyCashPeriod(models.Model):
     def write(self, vals):
         configuration_fields = {"name", "fund_id", "date_start", "date_end"}
         if configuration_fields.intersection(vals) and not self.env.user.has_group(
-            "petty_cash_management.group_petty_cash_finance_manager"
+            "account.group_account_manager"
         ):
-            raise AccessError(_("Only a Petty Cash Finance Manager can change period configuration."))
+            raise AccessError(_("Only a Accounting Administrator can change period configuration."))
         if "state" in vals:
             self._check_finance_manager()
         if "state" in vals and not self.env.context.get("petty_cash_state_transition"):

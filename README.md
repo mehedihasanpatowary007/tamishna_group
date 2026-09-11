@@ -1,52 +1,56 @@
 # Tamishna Group — Petty Cash Management for Odoo 19
 
-This repository contains an Odoo 19 custom application for the complete petty-cash lifecycle described in the supplied FRD. It is structured for direct deployment on Odoo.sh; it does not include or require a copy of the Odoo source tree.
+A simple petty cash application with one approval step:
 
-## Included scope
+`Draft → Pending Approval → Posted`
 
-- Multiple company-aware petty cash funds with custodian, branch/location, currency, minimum level, and maximum limit.
-- Expense categories mapped to accounting expense accounts, per-transaction limits, and attachment policies.
-- Draft/open/closed periods with overlap prevention, reconciliation control, calculated opening/receipt/payment/closing totals, and PDF statements.
-- Opening balances, cash receipts, expenses/payments, and replenishments in one audited transaction register.
-- Configurable manager threshold followed by Finance approval and final accounting posting.
-- Real-time fund balances, insufficient-cash checks, maximum-fund-limit checks, and concurrent-posting protection.
-- Balanced Odoo journal entries with multi-currency handling and two-way traceability between the petty-cash transaction and `account.move`.
-- Return/reject reasons, chatter tracking, responsible users, and timestamps for each workflow milestone.
-- Fund dashboard cards, pending approvals, list/search views, graph/pivot analysis, and printable period statements.
-- Odoo 19 privileges for Finance Manager, Accountant, Custodian, Department Manager, and read-only Management; plus allowed-company and custodian-based record rules.
+## Who does what
 
-## Odoo.sh deployment
+- **Internal users:** create and submit their own requests without Accounting or HR access. They can see their own requests, company funds and available balances, attach receipts, and correct returned requests.
+- **Accounting Administrators:** see all requests in their allowed companies, configure funds/categories/periods, return or reject requests with a reason, and use **Approve & Post** to create and post the journal entry immediately.
 
-1. Push this repository to the Git branch connected to your Odoo.sh project.
-2. In Odoo.sh, wait for the build to finish successfully.
-3. Open the database, enable developer mode, and select **Apps → Update Apps List**.
-4. Remove the default **Apps** filter if necessary, search for **Petty Cash Management**, and install it.
-5. Assign Petty Cash privileges to users from **Settings → Users & Companies → Users**.
+Approval uses Odoo's standard `account.group_account_manager` (Accounting / Administrator). No separate petty cash privileges or manager threshold are required. Existing custom petty cash roles no longer grant approval or configuration rights.
 
-The installable module is [`petty_cash_management`](petty_cash_management). Its manifest version is `19.0.1.0.1`.
+## Screens
 
-App logo path: `petty_cash_management/static/description/icon.png` (place your PNG logo at this exact path).
+- **My Requests:** a status board with amounts, fund, requester and date; list view is also available.
+- **Pending Approvals:** the administrator's queue, with one-click approval on forms and batch approval from the list.
+- **Funds:** available cash and monthly totals, visible to internal users within their allowed companies.
+- **Dashboard and Reporting:** company/currency totals, analysis and PDF period statements for Accounting Administrators.
 
-## Initial configuration
+Forms show available cash, clear workflow messages and reviewer notes. Ledger fields and optional employee details are visible only to Accounting Administrators. The requester is recorded automatically and the matching open period is selected when the fund/date changes.
 
-As a Petty Cash Finance Manager:
+## Company selection
 
-1. Create expense categories and map each one to the correct expense ledger account.
-2. Create a fund and select its company, custodian, journal, petty-cash ledger account, and cash limits.
-3. Create and open a non-overlapping period for the fund.
-4. Enter an Opening Balance transaction, submit it, approve it, and post its journal entry.
-5. Custodians can then enter receipts, replenishments, and expenses for their assigned funds.
+Use Odoo's company selector at the top of the screen. Selecting Company A shows only A's data; selecting A and B shows both companies. This applies to requests, fund choices, periods, categories, dashboard totals and reports. Users can select only companies assigned to their account.
 
-An expense category can require evidence. When enabled, submission is blocked until at least one supporting document is attached.
+Normal users still see only their own requests within the selected companies. Accounting Administrators see all requests within that selection. Company names appear on request and fund cards, and dashboard totals remain separate per company and currency. A request and its journal entry always belong to the selected fund's company, even when another selected company is the main company.
 
-## Workflow
+## Setup
 
-Expenses follow:
+1. Install the module on Odoo 19 with `account`, `hr` and `mail` available.
+2. As an Accounting Administrator, create expense categories and map their expense accounts.
+3. Create a fund with its company, currency, custodian, journal, petty cash account and cash limits.
+4. Set the fund's **Default Source Account** for incoming cash. An administrator can also set a transaction-specific counterpart account while it is in draft.
+5. Create and open a period.
+6. Submit an opening balance request, then select **Approve & Post**.
 
-`Draft → Pending Manager Approval → Pending Finance Approval → Approved → Posted`
+Normal users do not need to select a ledger account or employee to submit. Required receipts, positive amounts, category limits, available funds and maximum cash limits are still enforced. Approval revalidates the request and open period before posting. Failed posting leaves the request pending.
 
-When the configured manager threshold does not apply, the manager stage is skipped. Opening balances, receipts, and replenishments go directly to Finance approval. Pending items can be returned for correction or rejected with a mandatory reason. Only the Finance Manager can create the final journal entry.
+## Upgrade on Odoo.sh
 
-## Automated tests
+Push the changes to the connected branch and upgrade **Petty Cash Management** in Apps. Version: `19.0.2.0.1`.
 
-The module includes Odoo transaction tests for accounting posting, balance calculation, traceability, and insufficient-balance protection. Odoo.sh runs module tests when test execution is enabled for the build.
+The upgrade moves old manager-pending and approved-but-unposted requests into Pending Approval, preserves existing audit history and journal links, and restores request ownership from the original creator. It does not post entries automatically. Assign Accounting / Administrator to the people who should approve; old petty cash manager membership alone is insufficient.
+
+## Tests
+
+The Odoo post-install tests cover journal posting, balances, insufficient funds, ordinary-user submission without Accounting access, request ownership, blocked direct status changes, duplicate approval, returns/resubmission, missing source accounts and legacy-role restrictions.
+
+Run in an Odoo 19 test database:
+
+```sh
+odoo-bin -d petty_cash_test -i petty_cash_management --test-enable --test-tags /petty_cash_management --stop-after-init
+```
+
+This repository contains the add-on only; it does not bundle Odoo or PostgreSQL.

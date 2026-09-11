@@ -1,6 +1,8 @@
 from odoo import api, fields, models, Command, _
 from odoo.exceptions import AccessError, UserError, ValidationError
 
+_WORKFLOW_TOKEN = object()
+
 
 class PettyCashTransaction(models.Model):
     _name = "petty.cash.transaction"
@@ -16,7 +18,11 @@ class PettyCashTransaction(models.Model):
         required=True, default="expense", index=True, tracking=True,
     )
     date = fields.Date(required=True, default=fields.Date.context_today, index=True, tracking=True)
-    fund_id = fields.Many2one("petty.cash.fund", required=True, ondelete="restrict", index=True, check_company=True, tracking=True)
+    fund_id = fields.Many2one(
+        "petty.cash.fund", required=True, ondelete="restrict", index=True,
+        check_company=True, tracking=True,
+        domain="[('company_id', 'in', context.get('allowed_company_ids', []))]",
+    )
     company_id = fields.Many2one("res.company", required=True, default=lambda self: self.env.company, index=True)
     currency_id = fields.Many2one(related="fund_id.currency_id", store=True)
     period_id = fields.Many2one("petty.cash.period", required=True, ondelete="restrict", index=True, check_company=True, tracking=True)
@@ -39,13 +45,18 @@ class PettyCashTransaction(models.Model):
     department_id = fields.Many2one("hr.department", check_company=True)
     requester_id = fields.Many2one("hr.employee", check_company=True, tracking=True)
     custodian_id = fields.Many2one(related="fund_id.custodian_id", store=True)
+    requested_by_id = fields.Many2one(
+        "res.users", string="Requested By", required=True,
+        default=lambda self: self.env.user, readonly=True, copy=False,
+    )
+    available_balance = fields.Monetary(related="fund_id.current_balance", string="Available Cash")
     attachment_ids = fields.Many2many(
         "ir.attachment", "petty_cash_transaction_attachment_rel", "transaction_id", "attachment_id",
         string="Supporting Documents",
     )
     state = fields.Selection(
-        [("draft", "Draft"), ("manager", "Pending Manager Approval"),
-         ("finance", "Pending Finance Approval"), ("approved", "Approved"),
+        [("draft", "Draft"), ("manager", "Pending Approval (Legacy)"),
+         ("finance", "Pending Approval"), ("approved", "Pending Posting (Legacy)"),
          ("posted", "Posted"), ("rejected", "Rejected"),
          ("returned", "Returned for Correction"), ("cancelled", "Cancelled")],
         default="draft", required=True, copy=False, index=True, tracking=True,
@@ -95,16 +106,26 @@ class PettyCashTransaction(models.Model):
             if vals.get("state", "draft") != "draft" or any(vals.get(field) for field in audit_fields):
                 raise AccessError(_("New transactions must start in Draft without approval audit data."))
             vals["state"] = "draft"
+            vals["requested_by_id"] = self.env.user.id
             if vals.get("fund_id"):
                 vals["company_id"] = self.env["petty.cash.fund"].browse(vals["fund_id"]).company_id.id
             if vals.get("name", "New") == "New":
                 vals["name"] = sequence.next_by_code("petty.cash.transaction") or "New"
         return super().create(vals_list)
 
-    @api.onchange("fund_id")
+    @api.onchange("fund_id", "date")
     def _onchange_fund_id(self):
+        previous_company = self.company_id
         self.company_id = self.fund_id.company_id
-        self.period_id = False
+        if previous_company != self.company_id:
+            self.category_id = False
+            self.counterpart_account_id = False
+            self.department_id = False
+            self.requester_id = False
+        self.period_id = self.env["petty.cash.period"].search([
+            ("fund_id", "=", self.fund_id.id), ("state", "=", "open"),
+            ("date_start", "<=", self.date), ("date_end", ">=", self.date),
+        ], limit=1)
 
     @api.constrains("fund_id", "period_id", "date")
     def _check_period(self):
@@ -119,15 +140,13 @@ class PettyCashTransaction(models.Model):
         if self.period_id.state != "open":
             raise UserError(_("Transactions can only be submitted in an open period."))
         if self.transaction_type == "expense":
-            if not self.category_id or not self.requester_id:
-                raise UserError(_("Expense category and requester are required."))
+            if not self.category_id:
+                raise UserError(_("Select an expense category."))
             if self.category_id.attachment_required and not self.attachment_ids:
                 raise UserError(_("A supporting document is required for this expense category."))
             if self.category_id.maximum_amount and self.amount > self.category_id.maximum_amount:
                 raise UserError(_("The amount exceeds the configured category limit."))
-        elif not self.counterpart_account_id:
-            raise UserError(_("A counterpart account is required for incoming cash."))
-        if self.transaction_type == "opening" and self.search_count([
+        if self.transaction_type == "opening" and self.sudo().search_count([
             ("id", "!=", self.id), ("period_id", "=", self.period_id.id),
             ("transaction_type", "=", "opening"),
             ("state", "not in", ("rejected", "cancelled")),
@@ -144,23 +163,14 @@ class PettyCashTransaction(models.Model):
         if self.transaction_type in ("receipt", "replenishment") and not self.receipt_type:
             raise UserError(_("Receipt type is required for receipts and replenishments."))
 
-    def _requires_manager_approval(self):
-        self.ensure_one()
-        threshold = self.fund_id.manager_approval_threshold
-        return (
-            self.transaction_type == "expense"
-            and self.fund_id.manager_approval_required
-            and (not threshold or self.amount >= threshold)
-        )
-
     def action_submit(self):
         for transaction in self:
             transaction._check_custodian_or_finance()
             if transaction.state not in ("draft", "returned"):
                 raise UserError(_("Only draft or returned transactions can be submitted."))
             transaction._validate_submission()
-            transaction.with_context(petty_cash_state_transition=True).write({
-                "state": "manager" if transaction._requires_manager_approval() else "finance",
+            transaction.with_context(petty_cash_state_transition=_WORKFLOW_TOKEN).write({
+                "state": "finance",
                 "submitted_by_id": self.env.user.id, "submitted_at": fields.Datetime.now(),
                 "manager_approved_by_id": False, "manager_approved_at": False,
                 "finance_approved_by_id": False, "finance_approved_at": False,
@@ -168,38 +178,22 @@ class PettyCashTransaction(models.Model):
             })
 
     def action_manager_approve(self):
-        if not self.env.user.has_group("petty_cash_management.group_petty_cash_department_manager"):
-            raise AccessError(_("Only a Department Manager can perform manager approval."))
-        for transaction in self:
-            if transaction.state != "manager":
-                raise UserError(_("The transaction is not awaiting manager approval."))
-            transaction.with_context(petty_cash_state_transition=True).write({
-                "state": "finance", "manager_approved_by_id": self.env.user.id,
-                "manager_approved_at": fields.Datetime.now(),
-            })
+        return self.action_approve()
 
     def _check_finance_user(self):
-        if not self.env.user.has_group("petty_cash_management.group_petty_cash_finance_manager"):
-            raise AccessError(_("Only a Finance Manager can perform this action."))
+        if not self.env.user.has_group("account.group_account_manager"):
+            raise AccessError(_("Only an Accounting Administrator can approve and post petty cash."))
 
     def _check_custodian_or_finance(self):
         self.ensure_one()
-        if self.fund_id.custodian_id == self.env.user:
+        if self.create_uid == self.env.user:
             return
-        if self.env.user.has_group("petty_cash_management.group_petty_cash_finance_manager"):
+        if self.env.user.has_group("account.group_account_manager"):
             return
-        raise AccessError(_("Only the assigned custodian or a Finance Manager can perform this action."))
+        raise AccessError(_("Only the request owner or an Accounting Administrator can change this request."))
 
     def action_finance_approve(self):
-        self._check_finance_user()
-        for transaction in self:
-            if transaction.state != "finance":
-                raise UserError(_("The transaction is not awaiting finance approval."))
-            transaction._validate_fund_limits()
-            transaction.with_context(petty_cash_state_transition=True).write({
-                "state": "approved", "finance_approved_by_id": self.env.user.id,
-                "finance_approved_at": fields.Datetime.now(),
-            })
+        return self.action_approve()
 
     def _validate_fund_limits(self):
         self.ensure_one()
@@ -210,17 +204,34 @@ class PettyCashTransaction(models.Model):
             raise UserError(_("This transaction would exceed the fund's maximum cash limit."))
 
     def action_post(self):
+        return self.action_approve()
+
+    def action_approve(self):
         self._check_finance_user()
+        self.check_access("write")
+        # A failed journal entry must leave every request pending, even if a caller
+        # catches the exception inside the surrounding transaction.
+        with self.env.cr.savepoint():
+            self._approve_and_post()
+        return True
+
+    def _approve_and_post(self):
         for transaction in self:
-            if transaction.state != "approved":
-                raise UserError(_("Only approved transactions can be posted."))
+            transaction = transaction.with_company(transaction.company_id)
+            if transaction.state not in ("finance", "manager", "approved"):
+                raise UserError(_("Only pending requests can be approved."))
             self.env.cr.execute("SELECT id FROM petty_cash_fund WHERE id = %s FOR UPDATE", [transaction.fund_id.id])
             transaction.invalidate_recordset(["state"])
-            if transaction.state != "approved":
+            if transaction.state not in ("finance", "manager", "approved"):
                 raise UserError(_("This transaction has already been processed."))
             transaction.fund_id.invalidate_recordset(["current_balance"])
+            transaction._validate_submission()
             transaction._validate_fund_limits()
-            account = transaction.category_id.expense_account_id if transaction.transaction_type == "expense" else transaction.counterpart_account_id
+            account = transaction.category_id.expense_account_id if transaction.transaction_type == "expense" else (
+                transaction.counterpart_account_id or transaction.fund_id.source_account_id
+            )
+            if not account:
+                raise UserError(_("Configure a source account on the fund before approving incoming cash."))
             debit_account = account if transaction.transaction_type == "expense" else transaction.fund_id.account_id
             credit_account = transaction.fund_id.account_id if transaction.transaction_type == "expense" else account
             label = transaction.description or transaction.name
@@ -247,8 +258,10 @@ class PettyCashTransaction(models.Model):
                     "opening_balance": transaction.period_id.opening_balance + transaction.amount,
                     "opening_balance_confirmed": True,
                 })
-            transaction.with_context(petty_cash_state_transition=True).write({
+            transaction.with_context(petty_cash_state_transition=_WORKFLOW_TOKEN).write({
                 "state": "posted", "move_id": move.id,
+                "finance_approved_by_id": self.env.user.id,
+                "finance_approved_at": fields.Datetime.now(),
                 "posted_by_id": self.env.user.id, "posted_at": fields.Datetime.now(),
             })
 
@@ -268,42 +281,36 @@ class PettyCashTransaction(models.Model):
 
     def _check_decision_access(self):
         self.ensure_one()
-        if self.state == "manager" and self.env.user.has_group(
-            "petty_cash_management.group_petty_cash_department_manager"
-        ):
-            return
-        if self.state == "finance" and self.env.user.has_group(
-            "petty_cash_management.group_petty_cash_finance_manager"
-        ):
-            return
-        if self.state not in ("manager", "finance"):
+        self._check_finance_user()
+        if self.state not in ("manager", "finance", "approved"):
             raise UserError(_("Only a pending transaction can be returned or rejected."))
-        raise AccessError(_("You are not authorized for this approval stage."))
 
     def action_cancel(self):
         for transaction in self:
             transaction._check_custodian_or_finance()
             if transaction.state == "posted":
                 raise UserError(_("A posted transaction must be reversed through Accounting, not cancelled here."))
-            transaction.with_context(petty_cash_state_transition=True).write({"state": "cancelled"})
+            transaction.with_context(petty_cash_state_transition=_WORKFLOW_TOKEN).write({"state": "cancelled"})
 
     def action_reset_draft(self):
         for transaction in self:
             transaction._check_custodian_or_finance()
             if transaction.state not in ("rejected", "cancelled"):
                 raise UserError(_("Only rejected or cancelled transactions can be reset."))
-            transaction.with_context(petty_cash_state_transition=True).write({"state": "draft"})
+            transaction.with_context(petty_cash_state_transition=_WORKFLOW_TOKEN).write({"state": "draft"})
 
     def write(self, vals):
+        if vals.get("fund_id"):
+            vals = dict(vals, company_id=self.env["petty.cash.fund"].browse(vals["fund_id"]).company_id.id)
         target_state = vals.get("state")
         if target_state:
             for transaction in self:
                 allowed_transitions = {
-                    "draft": {"manager", "finance", "cancelled"},
-                    "returned": {"manager", "finance", "cancelled"},
-                    "manager": {"finance", "returned", "rejected", "cancelled"},
-                    "finance": {"approved", "returned", "rejected", "cancelled"},
-                    "approved": {"posted", "cancelled"},
+                    "draft": {"finance", "cancelled"},
+                    "returned": {"finance", "cancelled"},
+                    "manager": {"posted", "returned", "rejected", "cancelled"},
+                    "finance": {"posted", "returned", "rejected", "cancelled"},
+                    "approved": {"posted", "returned", "rejected", "cancelled"},
                     "rejected": {"draft", "cancelled"},
                     "cancelled": {"draft"},
                     "posted": set(),
@@ -313,16 +320,10 @@ class PettyCashTransaction(models.Model):
                         "Invalid petty cash status transition from %(source)s to %(target)s.",
                         source=transaction.state, target=target_state,
                     ))
-                if target_state in ("manager", "finance") and transaction.state in ("draft", "returned"):
+                if target_state == "finance" and transaction.state in ("draft", "returned"):
                     transaction._check_custodian_or_finance()
                     transaction._validate_submission()
-                    expected_state = "manager" if transaction._requires_manager_approval() else "finance"
-                    if target_state != expected_state:
-                        raise AccessError(_("The configured approval route cannot be bypassed."))
-                elif target_state == "finance" and transaction.state == "manager":
-                    if not self.env.user.has_group("petty_cash_management.group_petty_cash_department_manager"):
-                        raise AccessError(_("Only a Department Manager can perform manager approval."))
-                elif target_state in ("approved", "posted"):
+                elif target_state == "posted":
                     transaction._check_finance_user()
                     transaction._validate_fund_limits()
                     if target_state == "posted":
@@ -335,22 +336,20 @@ class PettyCashTransaction(models.Model):
                         raise UserError(_("A return or rejection reason is required."))
                 elif target_state in ("cancelled", "draft"):
                     transaction._check_custodian_or_finance()
-        if "state" in vals and not self.env.context.get("petty_cash_state_transition"):
+        if "state" in vals and self.env.context.get("petty_cash_state_transition") is not _WORKFLOW_TOKEN:
             raise AccessError(_("Use the petty cash workflow actions to change transaction status."))
         audit_fields = {
             "submitted_by_id", "submitted_at", "manager_approved_by_id", "manager_approved_at",
             "finance_approved_by_id", "finance_approved_at", "posted_by_id", "posted_at",
             "decision_by_id", "decision_at", "decision_reason", "move_id",
         }
-        if audit_fields.intersection(vals) and not self.env.context.get("petty_cash_state_transition"):
+        if audit_fields.intersection(vals) and self.env.context.get("petty_cash_state_transition") is not _WORKFLOW_TOKEN:
             raise AccessError(_("Approval audit fields can only be updated by workflow actions."))
         if {"submitted_by_id", "submitted_at"}.intersection(vals):
             for transaction in self:
                 transaction._check_custodian_or_finance()
-        if any(vals.get(field) for field in ("manager_approved_by_id", "manager_approved_at")) and not self.env.user.has_group(
-            "petty_cash_management.group_petty_cash_department_manager"
-        ):
-            raise AccessError(_("Only a Department Manager can update manager approval audit data."))
+        if any(vals.get(field) for field in ("manager_approved_by_id", "manager_approved_at")):
+            raise AccessError(_("Legacy approval history cannot be changed."))
         if any(vals.get(field) for field in (
             "finance_approved_by_id", "finance_approved_at", "posted_by_id", "posted_at", "move_id"
         )):
@@ -359,22 +358,25 @@ class PettyCashTransaction(models.Model):
             for transaction in self:
                 transaction._check_decision_access()
         protected = {
+            "name", "company_id", "requested_by_id",
             "transaction_type", "date", "fund_id", "period_id", "amount", "description", "reference",
             "receipt_type", "source", "counterpart_account_id", "category_id", "department_id",
             "requester_id", "attachment_ids",
         }
+        if "requested_by_id" in vals:
+            raise AccessError(_("The request owner cannot be changed."))
         if protected.intersection(vals):
             for transaction in self:
                 if transaction.state not in ("draft", "returned"):
                     raise UserError(_("Return the transaction for correction before changing its business data."))
                 transaction._check_custodian_or_finance()
-        if protected.intersection(vals) and any(transaction.state == "posted" for transaction in self):
-            raise UserError(_("Posted petty cash transactions cannot be modified."))
         if protected.intersection(vals) and any(transaction.period_id.state == "closed" for transaction in self):
             raise UserError(_("Transactions in a closed period cannot be modified."))
         return super().write(vals)
 
     def unlink(self):
+        for transaction in self:
+            transaction._check_custodian_or_finance()
         if any(transaction.state not in ("draft", "cancelled") for transaction in self):
             raise UserError(_("Only draft or cancelled transactions can be deleted."))
         return super().unlink()
@@ -392,7 +394,7 @@ class PettyCashDecisionWizard(models.TransientModel):
         self.ensure_one()
         for transaction in self.transaction_ids:
             transaction._check_decision_access()
-        self.transaction_ids.with_context(petty_cash_state_transition=True).write({
+        self.transaction_ids.with_context(petty_cash_state_transition=_WORKFLOW_TOKEN).write({
             "state": self.decision, "decision_reason": self.reason,
             "decision_by_id": self.env.user.id, "decision_at": fields.Datetime.now(),
         })

@@ -1,28 +1,38 @@
-id,name,model_id/id,group_id/id,perm_read,perm_write,perm_create,perm_unlink
-access_fund_custodian,petty.cash.fund custodian,model_petty_cash_fund,group_petty_cash_custodian,1,0,0,0
-access_period_custodian,petty.cash.period custodian,model_petty_cash_period,group_petty_cash_custodian,1,0,0,0
-access_category_custodian,petty.cash.category custodian,model_petty_cash_category,group_petty_cash_custodian,1,0,0,0
-access_transaction_custodian,petty.cash.transaction custodian,model_petty_cash_transaction,group_petty_cash_custodian,1,1,1,1
-access_decision_custodian,petty.cash.decision.wizard custodian,model_petty_cash_decision_wizard,group_petty_cash_custodian,0,0,0,0
-access_fund_department_manager,petty.cash.fund department manager,model_petty_cash_fund,group_petty_cash_department_manager,1,0,0,0
-access_period_department_manager,petty.cash.period department manager,model_petty_cash_period,group_petty_cash_department_manager,1,0,0,0
-access_category_department_manager,petty.cash.category department manager,model_petty_cash_category,group_petty_cash_department_manager,1,0,0,0
-access_transaction_department_manager,petty.cash.transaction department manager,model_petty_cash_transaction,group_petty_cash_department_manager,1,1,0,0
-access_decision_department_manager,petty.cash.decision.wizard department manager,model_petty_cash_decision_wizard,group_petty_cash_department_manager,1,1,1,1
-access_fund_accountant,petty.cash.fund accountant,model_petty_cash_fund,group_petty_cash_accountant,1,0,0,0
-access_period_accountant,petty.cash.period accountant,model_petty_cash_period,group_petty_cash_accountant,1,1,0,0
-access_category_accountant,petty.cash.category accountant,model_petty_cash_category,group_petty_cash_accountant,1,0,0,0
-access_transaction_accountant,petty.cash.transaction accountant,model_petty_cash_transaction,group_petty_cash_accountant,1,0,0,0
-access_decision_accountant,petty.cash.decision.wizard accountant,model_petty_cash_decision_wizard,group_petty_cash_accountant,0,0,0,0
-access_fund_finance,petty.cash.fund finance manager,model_petty_cash_fund,group_petty_cash_finance_manager,1,1,1,1
-access_period_finance,petty.cash.period finance manager,model_petty_cash_period,group_petty_cash_finance_manager,1,1,1,1
-access_category_finance,petty.cash.category finance manager,model_petty_cash_category,group_petty_cash_finance_manager,1,1,1,1
-access_transaction_finance,petty.cash.transaction finance manager,model_petty_cash_transaction,group_petty_cash_finance_manager,1,1,1,1
-access_decision_finance,petty.cash.decision.wizard finance manager,model_petty_cash_decision_wizard,group_petty_cash_finance_manager,1,1,1,1
-access_dashboard_accountant,petty.cash.dashboard accountant,model_petty_cash_dashboard,group_petty_cash_accountant,1,0,0,0
-access_dashboard_finance,petty.cash.dashboard finance manager,model_petty_cash_dashboard,group_petty_cash_finance_manager,1,0,0,0
-access_fund_management,petty.cash.fund management,model_petty_cash_fund,group_petty_cash_management,1,0,0,0
-access_period_management,petty.cash.period management,model_petty_cash_period,group_petty_cash_management,1,0,0,0
-access_category_management,petty.cash.category management,model_petty_cash_category,group_petty_cash_management,1,0,0,0
-access_transaction_management,petty.cash.transaction management,model_petty_cash_transaction,group_petty_cash_management,1,0,0,0
-access_dashboard_management,petty.cash.dashboard management,model_petty_cash_dashboard,group_petty_cash_management,1,0,0,0
+"id","name","model_id/id","group_id/id","perm_read","perm_write","perm_create","perm_unlink"
+"access_fund_custodian","petty.cash.fund custodian","model_petty_cash_fund","group_petty_cash_custodian","0","0","0","0"
+"access_period_custodian","petty.cash.period custodian","model_petty_cash_period","group_petty_cash_custodian","0","0","0","0"
+"access_category_custodian","petty.cash.category custodian","model_petty_cash_category","group_petty_cash_custodian","0","0","0","0"
+"access_transaction_custodian","petty.cash.transaction custodian","model_petty_cash_transaction","group_petty_cash_custodian","0","0","0","0"
+"access_decision_custodian","petty.cash.decision.wizard custodian","model_petty_cash_decision_wizard","group_petty_cash_custodian","0","0","0","0"
+"access_fund_department_manager","petty.cash.fund department manager","model_petty_cash_fund","group_petty_cash_department_manager","0","0","0","0"
+"access_period_department_manager","petty.cash.period department manager","model_petty_cash_period","group_petty_cash_department_manager","0","0","0","0"
+"access_category_department_manager","petty.cash.category department manager","model_petty_cash_category","group_petty_cash_department_manager","0","0","0","0"
+"access_transaction_department_manager","petty.cash.transaction department manager","model_petty_cash_transaction","group_petty_cash_department_manager","0","0","0","0"
+"access_decision_department_manager","petty.cash.decision.wizard department manager","model_petty_cash_decision_wizard","group_petty_cash_department_manager","0","0","0","0"
+"access_fund_accountant","petty.cash.fund accountant","model_petty_cash_fund","group_petty_cash_accountant","0","0","0","0"
+"access_period_accountant","petty.cash.period accountant","model_petty_cash_period","group_petty_cash_accountant","0","0","0","0"
+"access_category_accountant","petty.cash.category accountant","model_petty_cash_category","group_petty_cash_accountant","0","0","0","0"
+"access_transaction_accountant","petty.cash.transaction accountant","model_petty_cash_transaction","group_petty_cash_accountant","0","0","0","0"
+"access_decision_accountant","petty.cash.decision.wizard accountant","model_petty_cash_decision_wizard","group_petty_cash_accountant","0","0","0","0"
+"access_fund_finance","petty.cash.fund finance manager","model_petty_cash_fund","group_petty_cash_finance_manager","0","0","0","0"
+"access_period_finance","petty.cash.period finance manager","model_petty_cash_period","group_petty_cash_finance_manager","0","0","0","0"
+"access_category_finance","petty.cash.category finance manager","model_petty_cash_category","group_petty_cash_finance_manager","0","0","0","0"
+"access_transaction_finance","petty.cash.transaction finance manager","model_petty_cash_transaction","group_petty_cash_finance_manager","0","0","0","0"
+"access_decision_finance","petty.cash.decision.wizard finance manager","model_petty_cash_decision_wizard","group_petty_cash_finance_manager","0","0","0","0"
+"access_dashboard_accountant","petty.cash.dashboard accountant","model_petty_cash_dashboard","group_petty_cash_accountant","0","0","0","0"
+"access_dashboard_finance","petty.cash.dashboard finance manager","model_petty_cash_dashboard","group_petty_cash_finance_manager","0","0","0","0"
+"access_fund_management","petty.cash.fund management","model_petty_cash_fund","group_petty_cash_management","0","0","0","0"
+"access_period_management","petty.cash.period management","model_petty_cash_period","group_petty_cash_management","0","0","0","0"
+"access_category_management","petty.cash.category management","model_petty_cash_category","group_petty_cash_management","0","0","0","0"
+"access_transaction_management","petty.cash.transaction management","model_petty_cash_transaction","group_petty_cash_management","0","0","0","0"
+"access_dashboard_management","petty.cash.dashboard management","model_petty_cash_dashboard","group_petty_cash_management","0","0","0","0"
+access_simple_fund_user,Petty cash fund user,model_petty_cash_fund,base.group_user,1,0,0,0
+access_simple_period_user,Petty cash period user,model_petty_cash_period,base.group_user,1,0,0,0
+access_simple_category_user,Petty cash category user,model_petty_cash_category,base.group_user,1,0,0,0
+access_simple_transaction_user,Petty cash transaction user,model_petty_cash_transaction,base.group_user,1,1,1,1
+access_simple_fund_admin,Petty cash fund administrator,model_petty_cash_fund,account.group_account_manager,1,1,1,1
+access_simple_period_admin,Petty cash period administrator,model_petty_cash_period,account.group_account_manager,1,1,1,1
+access_simple_category_admin,Petty cash category administrator,model_petty_cash_category,account.group_account_manager,1,1,1,1
+access_simple_transaction_admin,Petty cash transaction administrator,model_petty_cash_transaction,account.group_account_manager,1,1,1,1
+access_simple_decision_wizard_admin,Petty cash decision_wizard administrator,model_petty_cash_decision_wizard,account.group_account_manager,1,1,1,1
+access_simple_dashboard_admin,Petty cash dashboard administrator,model_petty_cash_dashboard,account.group_account_manager,1,0,0,0

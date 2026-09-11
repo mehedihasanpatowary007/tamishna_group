@@ -1,42 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_petty_cash_category_list" model="ir.ui.view">
-        <field name="name">petty.cash.category.list</field>
-        <field name="model">petty.cash.category</field>
-        <field name="arch" type="xml">
-            <list editable="bottom">
-                <field name="name"/>
-                <field name="company_id" groups="base.group_multi_company"/>
-                <field name="expense_account_id"/>
-                <field name="maximum_amount"/>
-                <field name="currency_id" column_invisible="True"/>
-                <field name="attachment_required"/>
-                <field name="active"/>
-            </list>
-        </field>
-    </record>
-    <record id="view_petty_cash_category_form" model="ir.ui.view">
-        <field name="name">petty.cash.category.form</field>
-        <field name="model">petty.cash.category</field>
-        <field name="arch" type="xml">
-            <form string="Expense Category">
-                <sheet>
-                    <group>
-                        <field name="name"/>
-                        <field name="company_id" groups="base.group_multi_company"/>
-                        <field name="expense_account_id"/>
-                        <field name="maximum_amount"/>
-                        <field name="currency_id" invisible="1"/>
-                        <field name="attachment_required"/>
-                        <field name="active"/>
-                    </group>
-                </sheet>
-            </form>
-        </field>
-    </record>
-    <record id="action_petty_cash_category" model="ir.actions.act_window">
-        <field name="name">Expense Categories</field>
-        <field name="res_model">petty.cash.category</field>
-        <field name="view_mode">list,form</field>
-    </record>
+  <record id="view_petty_cash_category_list" model="ir.ui.view">
+    <field name="name">petty.cash.category.list</field>
+    <field name="model">petty.cash.category</field>
+    <field name="arch" type="xml">
+      <list editable="bottom">
+        <field name="name" />
+        <field name="company_id" groups="base.group_multi_company" />
+        <field name="expense_account_id" groups="account.group_account_manager" />
+        <field name="maximum_amount" />
+        <field name="currency_id" column_invisible="True" />
+        <field name="attachment_required" />
+        <field name="active" />
+      </list>
+    </field>
+  </record>
+  <record id="view_petty_cash_category_form" model="ir.ui.view">
+    <field name="name">petty.cash.category.form</field>
+    <field name="model">petty.cash.category</field>
+    <field name="arch" type="xml">
+      <form string="Expense Category">
+        <sheet>
+          <group>
+            <field name="name" />
+            <field name="company_id" groups="base.group_multi_company" />
+            <field name="expense_account_id" groups="account.group_account_manager" />
+            <field name="maximum_amount" />
+            <field name="currency_id" invisible="1" />
+            <field name="attachment_required" />
+            <field name="active" />
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record>
+  <record id="action_petty_cash_category" model="ir.actions.act_window">
+    <field name="name">Expense Categories</field>
+    <field name="res_model">petty.cash.category</field>
+    <field name="view_mode">list,form</field>
+  </record>
 </odoo>

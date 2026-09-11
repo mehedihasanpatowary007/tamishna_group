@@ -44,8 +44,8 @@
         <field name="arch" type="xml">
             <form string="Petty Cash Period">
                 <header>
-                    <button name="action_open" string="Open Period" type="object" class="btn-primary" invisible="state != 'draft'" groups="petty_cash_management.group_petty_cash_finance_manager"/>
-                    <button name="action_close" string="Close Period" type="object" class="btn-primary" invisible="state != 'open'" groups="petty_cash_management.group_petty_cash_finance_manager"/>
+                    <button name="action_open" string="Open Period" type="object" class="btn-primary" invisible="state != 'draft'" groups="account.group_account_manager"/>
+                    <button name="action_close" string="Close Period" type="object" class="btn-primary" invisible="state != 'open'" groups="account.group_account_manager"/>
                     <button name="action_print_statement" string="Print Statement" type="object" invisible="state == 'draft'"/>
                     <field name="state" widget="statusbar" statusbar_visible="draft,open,closed"/>
                 </header>

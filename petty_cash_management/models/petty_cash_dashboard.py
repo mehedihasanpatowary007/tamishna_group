@@ -49,7 +49,7 @@ class PettyCashDashboard(models.Model):
                     SUM(COALESCE((
                         SELECT COUNT(*)
                           FROM petty_cash_transaction t
-                         WHERE t.fund_id = f.id AND t.state IN ('manager', 'finance')
+                         WHERE t.fund_id = f.id AND t.state IN ('manager', 'finance', 'approved')
                     ), 0))::integer AS pending_approvals,
                     SUM(CASE WHEN COALESCE((
                         SELECT SUM(t.signed_amount)
