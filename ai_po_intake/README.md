@@ -41,3 +41,11 @@ The same image is used for:
 - the Purchase Document Intake icon in the Odoo app launcher/dashboard
 
 Recommended: square PNG, ideally 512x512 px. Keep the filename exactly `icon.png`.
+
+## Review exceptions (v19.0.2.3.0)
+- Block exceptions require a written resolution and acknowledgement before RFQ creation.
+- Warning exceptions are informational and never block RFQ creation.
+- Duplicate vendor reference is a blocking risk exception that can be acknowledged with a resolution.
+- Duplicate file content is a warning only.
+- Vendor is no longer a mandatory form field; if it remains unresolved after extraction, a blocking review exception is raised instead.
+- Exceptions are generated after document analysis, so FIFO queue processing remains independent from human review.

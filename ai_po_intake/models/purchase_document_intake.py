@@ -1,3 +1,5 @@
+import base64
+import hashlib
 import json
 import logging
 import mimetypes
@@ -62,6 +64,7 @@ class PurchaseDocumentIntake(models.Model):
     source_filename = fields.Char(string="File Name", copy=False)
     document_name = fields.Char(string="Document Name", tracking=True)
     source_format = fields.Char(string="Source Format", copy=False, readonly=True)
+    source_checksum = fields.Char(string="Source Checksum", copy=False, readonly=True, index=True)
     ai_payload = fields.Json(string="Provider Payload", copy=False, readonly=True)
     extracted_by_ai = fields.Boolean(string="Extracted", copy=False, readonly=True)
     extraction_summary = fields.Text(string="Extraction Notes", copy=False, readonly=True)
@@ -132,6 +135,24 @@ class PurchaseDocumentIntake(models.Model):
         compute="_compute_totals",
         store=True,
     )
+    exception_ids = fields.One2many(
+        "purchase.document.intake.exception",
+        "intake_id",
+        string="Review Exceptions",
+        copy=False,
+    )
+    blocking_exception_count = fields.Integer(
+        string="Blocking Exceptions",
+        compute="_compute_exception_counts",
+    )
+    warning_exception_count = fields.Integer(
+        string="Warnings",
+        compute="_compute_exception_counts",
+    )
+    has_unresolved_blockers = fields.Boolean(
+        string="Has Unresolved Blocking Exceptions",
+        compute="_compute_exception_counts",
+    )
 
     @api.depends("line_ids.quantity", "line_ids.unit_price", "line_ids.product_id")
     def _compute_totals(self):
@@ -141,12 +162,45 @@ class PurchaseDocumentIntake(models.Model):
             rec.matched_line_count = len(rec.line_ids.filtered("product_id"))
             rec.unmatched_line_count = len(rec.line_ids.filtered(lambda line: not line.product_id))
 
+    @api.depends("exception_ids.exception_type", "exception_ids.acknowledged")
+    def _compute_exception_counts(self):
+        for rec in self:
+            blockers = rec.exception_ids.filtered(lambda exc: exc.exception_type == "block" and not exc.acknowledged)
+            warnings = rec.exception_ids.filtered(lambda exc: exc.exception_type == "warning")
+            rec.blocking_exception_count = len(blockers)
+            rec.warning_exception_count = len(warnings)
+            rec.has_unresolved_blockers = bool(blockers)
+
+    @api.model
+    def _checksum_binary(self, value):
+        if not value:
+            return False
+        try:
+            raw = base64.b64decode(value, validate=False)
+        except Exception:
+            raw = value if isinstance(value, bytes) else str(value).encode()
+        return hashlib.sha256(raw).hexdigest()
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
             if vals.get("name", _("New")) == _("New"):
                 vals["name"] = self.env["ir.sequence"].next_by_code("purchase.document.intake") or _("New")
+            if vals.get("source_file"):
+                vals["source_checksum"] = self._checksum_binary(vals["source_file"])
         return super().create(vals_list)
+
+    def write(self, vals):
+        vals = dict(vals)
+        if "source_file" in vals:
+            vals["source_checksum"] = self._checksum_binary(vals.get("source_file"))
+        res = super().write(vals)
+        if not self.env.context.get("skip_exception_refresh"):
+            review_fields = {"partner_id", "vendor_reference", "extraction_summary"}
+            if review_fields.intersection(vals):
+                for rec in self.filtered(lambda r: r.extracted_by_ai and r.state in ("review", "error")):
+                    rec._refresh_review_exceptions()
+        return res
 
     @api.model
     def migrate_legacy_preview_references(self):
@@ -499,7 +553,8 @@ class PurchaseDocumentIntake(models.Model):
             lines_json=lines_json,
             extraction_summary=extraction_summary,
         )
-        preview = self.create(vals)
+        preview = self.with_context(skip_exception_refresh=True).create(vals)
+        preview._refresh_review_exceptions()
         preview.message_post(
             body=_(
                 "Document extraction created this preview. %s of %s line(s) matched automatically; %s ambiguous line(s). "
@@ -550,7 +605,8 @@ class PurchaseDocumentIntake(models.Model):
             "ai_last_analyzed_at": fields.Datetime.now(),
             "source_format": source_format or self.source_format,
         })
-        self.write(vals)
+        self.with_context(skip_exception_refresh=True).write(vals)
+        self._refresh_review_exceptions()
         self.message_post(
             body=_(
                 "Document processed with %s (%s). %s of %s line(s) matched automatically."
@@ -651,6 +707,137 @@ class PurchaseDocumentIntake(models.Model):
         return True
 
     # -------------------------------------------------------------------------
+    # Review exceptions
+    # -------------------------------------------------------------------------
+    def _ensure_review_exception(self, code, exception_type, title, message, requires_correction=False):
+        self.ensure_one()
+        Exception = self.env["purchase.document.intake.exception"]
+        existing = Exception.search([("intake_id", "=", self.id), ("code", "=", code)], limit=1)
+        vals = {
+            "exception_type": exception_type,
+            "title": title,
+            "message": message,
+            "requires_correction": requires_correction,
+        }
+        if existing:
+            # A correction-type blocker must reopen if the underlying issue returns.
+            # A risk blocker (for example duplicate reference) stays acknowledged unless
+            # the underlying duplicate set/message has changed.
+            if existing.acknowledged and (requires_correction or existing.message != message):
+                vals.update({
+                    "acknowledged": False,
+                    "acknowledged_by": False,
+                    "acknowledged_at": False,
+                    "resolution": False,
+                })
+            existing.write(vals)
+            return existing
+        vals.update({"intake_id": self.id, "code": code})
+        return Exception.create(vals)
+
+    def _refresh_review_exceptions(self):
+        for rec in self:
+            if not rec.extracted_by_ai or rec.state not in ("review", "error"):
+                continue
+
+            # Blocking exceptions: these require resolution text + acknowledgement.
+            if not rec.partner_id:
+                rec._ensure_review_exception(
+                    "vendor_missing",
+                    "block",
+                    _("Vendor not selected"),
+                    _("No Odoo vendor is selected. Select the correct vendor before creating the RFQ."),
+                    requires_correction=True,
+                )
+
+            if not rec.line_ids:
+                rec._ensure_review_exception(
+                    "no_lines",
+                    "block",
+                    _("No purchase lines extracted"),
+                    _("The document does not currently contain any reviewable purchase lines."),
+                    requires_correction=True,
+                )
+
+            invalid_qty = rec.line_ids.filtered(lambda line: line.quantity <= 0)
+            if invalid_qty:
+                refs = ", ".join((line.source_code or line.source_description or str(line.id)) for line in invalid_qty[:8])
+                rec._ensure_review_exception(
+                    "invalid_quantity",
+                    "block",
+                    _("Invalid quantity"),
+                    _("One or more lines have a quantity of zero or less: %s") % refs,
+                    requires_correction=True,
+                )
+
+            unmatched = rec.line_ids.filtered(lambda line: not line.product_id)
+            if unmatched:
+                refs = ", ".join((line.source_code or line.source_description or str(line.id)) for line in unmatched[:8])
+                rec._ensure_review_exception(
+                    "unmatched_products",
+                    "block",
+                    _("Products require manual matching"),
+                    _("Match these extracted lines to Odoo products before creating the RFQ: %s") % refs,
+                    requires_correction=True,
+                )
+
+            reference = (rec.vendor_reference or "").strip()
+            if reference:
+                po_domain = [("partner_ref", "=ilike", reference), ("state", "!=", "cancel")]
+                if rec.partner_id:
+                    po_domain.append(("partner_id", "=", rec.partner_id.id))
+                duplicate_pos = self.env["purchase.order"].search(po_domain, limit=5)
+
+                preview_domain = [
+                    ("id", "!=", rec.id),
+                    ("vendor_reference", "=ilike", reference),
+                    ("state", "!=", "cancelled"),
+                ]
+                if rec.partner_id:
+                    preview_domain.append(("partner_id", "=", rec.partner_id.id))
+                duplicate_previews = self.search(preview_domain, limit=5)
+
+                if duplicate_pos or duplicate_previews:
+                    used_in = []
+                    if duplicate_pos:
+                        used_in.append(_("RFQ/PO: %s") % ", ".join(duplicate_pos.mapped("name")))
+                    if duplicate_previews:
+                        used_in.append(_("Preview: %s") % ", ".join(duplicate_previews.mapped("name")))
+                    rec._ensure_review_exception(
+                        "duplicate_vendor_reference",
+                        "block",
+                        _("Vendor reference already used"),
+                        _("Vendor reference '%s' already appears in %s. Review the duplicate risk, enter a resolution, and acknowledge it to proceed.")
+                        % (reference, "; ".join(used_in)),
+                        requires_correction=False,
+                    )
+
+            # Warning exceptions never disable RFQ creation and do not require acknowledgement.
+            if rec.source_checksum:
+                same_file = self.search([
+                    ("id", "!=", rec.id),
+                    ("source_checksum", "=", rec.source_checksum),
+                    ("state", "!=", "cancelled"),
+                ], order="id asc", limit=3)
+                if same_file:
+                    rec._ensure_review_exception(
+                        "duplicate_file",
+                        "warning",
+                        _("This file was uploaded before"),
+                        _("The same file content already exists in preview(s): %s. This is only a warning and does not block RFQ creation.")
+                        % ", ".join(same_file.mapped("name")),
+                    )
+
+            if rec.extraction_summary:
+                rec._ensure_review_exception(
+                    "extraction_notes",
+                    "warning",
+                    _("Extraction notes available"),
+                    rec.extraction_summary,
+                )
+        return True
+
+    # -------------------------------------------------------------------------
     # Human workflow
     # -------------------------------------------------------------------------
     def action_set_review(self):
@@ -673,26 +860,25 @@ class PurchaseDocumentIntake(models.Model):
 
     def _validate_before_create(self):
         self.ensure_one()
-        errors = []
         if self.purchase_order_id:
-            errors.append(_("An RFQ/PO has already been created from this preview."))
+            raise UserError(_("An RFQ/PO has already been created from this preview."))
+
+        self._refresh_review_exceptions()
+        blockers = self.exception_ids.filtered(lambda exc: exc.exception_type == "block" and not exc.acknowledged)
+        if blockers:
+            titles = "\n- ".join(blockers.mapped("title"))
+            raise UserError(_("Resolve and acknowledge all blocking exceptions before creating the RFQ:\n- %s") % titles)
+
+        # Vendor is intentionally not a mandatory form field. The vendor-missing
+        # blocker can only be acknowledged after a vendor has actually been selected.
         if not self.partner_id:
-            errors.append(_("Select a vendor."))
+            raise UserError(_("Select a vendor before creating the RFQ."))
         if not self.line_ids:
-            errors.append(_("At least one purchase line is required."))
-
-        invalid_qty = self.line_ids.filtered(lambda l: l.quantity <= 0)
-        if invalid_qty:
-            errors.append(_("Every line must have a quantity greater than zero."))
-
-        unmatched = self.line_ids.filtered(lambda l: not l.product_id)
-        if unmatched:
-            refs = ", ".join((line.source_code or line.source_description or str(line.id)) for line in unmatched[:8])
-            errors.append(_("Match every extracted line to an Odoo product first. Unmatched: %s") % refs)
-
-        if errors:
-            self.write({"state": "error", "extraction_error": "\n".join(errors)})
-            raise UserError("\n".join(errors))
+            raise UserError(_("At least one purchase line is required."))
+        if self.line_ids.filtered(lambda line: line.quantity <= 0):
+            raise UserError(_("Every line must have a quantity greater than zero."))
+        if self.line_ids.filtered(lambda line: not line.product_id):
+            raise UserError(_("Match every extracted line to an Odoo product first."))
 
     def _copy_source_attachment_to_po(self, po):
         self.ensure_one()
@@ -821,6 +1007,76 @@ class PurchaseDocumentIntake(models.Model):
         }
 
 
+class PurchaseDocumentIntakeException(models.Model):
+    _name = "purchase.document.intake.exception"
+    _description = "Purchase Document Review Exception"
+    _order = "exception_type, id"
+
+    intake_id = fields.Many2one(
+        "ai.purchase.intake",
+        string="Preview",
+        required=True,
+        ondelete="cascade",
+        index=True,
+    )
+    company_id = fields.Many2one(related="intake_id.company_id", store=True, index=True)
+    code = fields.Char(required=True, readonly=True, index=True)
+    exception_type = fields.Selection(
+        [("block", "Block"), ("warning", "Warning")],
+        string="Type",
+        required=True,
+        default="warning",
+        index=True,
+    )
+    title = fields.Char(required=True)
+    message = fields.Text(required=True)
+    requires_correction = fields.Boolean(string="Correction Required", readonly=True)
+    resolution = fields.Text(string="Resolution")
+    acknowledged = fields.Boolean(string="Acknowledged", readonly=True, copy=False)
+    acknowledged_by = fields.Many2one("res.users", string="Acknowledged By", readonly=True, copy=False)
+    acknowledged_at = fields.Datetime(string="Acknowledged At", readonly=True, copy=False)
+
+    _sql_constraints = [
+        (
+            "intake_exception_code_unique",
+            "unique(intake_id, code)",
+            "Each exception code can only appear once per purchase document preview.",
+        )
+    ]
+
+    def _condition_still_open(self):
+        self.ensure_one()
+        rec = self.intake_id
+        if self.code == "vendor_missing":
+            return not rec.partner_id
+        if self.code == "no_lines":
+            return not rec.line_ids
+        if self.code == "invalid_quantity":
+            return bool(rec.line_ids.filtered(lambda line: line.quantity <= 0))
+        if self.code == "unmatched_products":
+            return bool(rec.line_ids.filtered(lambda line: not line.product_id))
+        return False
+
+    def action_acknowledge(self):
+        self.ensure_one()
+        if self.exception_type != "block":
+            return {"type": "ir.actions.client", "tag": "reload"}
+        if not (self.resolution or "").strip():
+            raise UserError(_("Enter a resolution before acknowledging this blocking exception."))
+        if self.requires_correction and self._condition_still_open():
+            raise UserError(_("Correct the underlying issue first, then enter the resolution and acknowledge the exception."))
+        self.write({
+            "acknowledged": True,
+            "acknowledged_by": self.env.user.id,
+            "acknowledged_at": fields.Datetime.now(),
+        })
+        self.intake_id.message_post(
+            body=_("Blocking exception acknowledged: %s. Resolution: %s") % (self.title, self.resolution)
+        )
+        return {"type": "ir.actions.client", "tag": "reload"}
+
+
+
 class PurchaseDocumentIntakeLine(models.Model):
     _name = "ai.purchase.intake.line"
     _description = "Purchase Document Preview Line"
@@ -887,9 +1143,26 @@ class PurchaseDocumentIntakeLine(models.Model):
         for vals in vals_list:
             if vals.get("product_id"):
                 vals["match_status"] = "matched"
-        return super().create(vals_list)
+        records = super().create(vals_list)
+        if not self.env.context.get("skip_exception_refresh"):
+            for intake in records.mapped("intake_id").filtered(lambda r: r.extracted_by_ai and r.state in ("review", "error")):
+                intake._refresh_review_exceptions()
+        return records
 
     def write(self, vals):
         if "product_id" in vals:
             vals["match_status"] = "matched" if vals.get("product_id") else "unmatched"
-        return super().write(vals)
+        intakes = self.mapped("intake_id")
+        res = super().write(vals)
+        if not self.env.context.get("skip_exception_refresh") and {"product_id", "quantity"}.intersection(vals):
+            for intake in intakes.filtered(lambda r: r.extracted_by_ai and r.state in ("review", "error")):
+                intake._refresh_review_exceptions()
+        return res
+
+    def unlink(self):
+        intakes = self.mapped("intake_id")
+        res = super().unlink()
+        if not self.env.context.get("skip_exception_refresh"):
+            for intake in intakes.filtered(lambda r: r.exists() and r.extracted_by_ai and r.state in ("review", "error")):
+                intake._refresh_review_exceptions()
+        return res

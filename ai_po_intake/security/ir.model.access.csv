@@ -5,3 +5,5 @@ access_ai_purchase_intake_line_user,purchase document intake line user,model_ai_
 access_ai_purchase_intake_line_manager,purchase document intake line manager,model_ai_purchase_intake_line,purchase.group_purchase_manager,1,1,1,1
 access_ai_purchase_provider_config_system,purchase document provider config system,model_ai_purchase_provider_config,base.group_system,1,1,1,1
 access_purchase_document_upload_wizard_user,purchase document upload wizard user,model_purchase_document_upload_wizard,purchase.group_purchase_user,1,1,1,1
+access_purchase_document_exception_user,purchase document exception user,model_purchase_document_intake_exception,purchase.group_purchase_user,1,1,1,0
+access_purchase_document_exception_manager,purchase document exception manager,model_purchase_document_intake_exception,purchase.group_purchase_manager,1,1,1,1

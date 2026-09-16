@@ -127,7 +127,7 @@
         <field name="name">ai.purchase.intake.form</field>
         <field name="model">ai.purchase.intake</field>
         <field name="arch" type="xml">
-            <form string="Purchase Document Preview" class="pdi_form_view">
+            <form string="Purchase Document Preview">
                 <header>
                     <button name="action_analyze_uploaded_document"
                             type="object"
@@ -144,7 +144,7 @@
                             string="Confirm &amp; Create RFQ"
                             class="btn-primary"
                             data-hotkey="q"
-                            invisible="state not in ['review', 'error'] or purchase_order_id"/>
+                            invisible="state != 'review' or purchase_order_id or has_unresolved_blockers"/>
                     <button name="action_open_purchase_order"
                             type="object"
                             string="Open RFQ / PO"
@@ -162,43 +162,6 @@
                 </header>
                 <sheet>
                     <widget name="web_ribbon" title="Processed" bg_color="text-bg-info" invisible="not extracted_by_ai"/>
-                    <div class="pdi_hero">
-                        <div class="pdi_hero_main">
-                            <div class="pdi_kicker">Purchase Document Intake</div>
-                            <h1 class="pdi_title"><field name="name" readonly="1"/></h1>
-                            <div class="pdi_subtitle">
-                                Clean review workspace for purchase documents. Upload a supplier file, analyze it, review the extracted details,
-                                and only then create the RFQ.
-                            </div>
-                        </div>
-                        <div class="pdi_hero_stats">
-                            <div class="pdi_stat_tile">
-                                <span class="pdi_stat_label">Total</span>
-                                <span class="pdi_stat_value"><field name="total_amount" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/></span>
-                            </div>
-                            <div class="pdi_stat_tile">
-                                <span class="pdi_stat_label">Lines</span>
-                                <span class="pdi_stat_value"><field name="line_count" readonly="1"/></span>
-                            </div>
-                            <div class="pdi_stat_tile">
-                                <span class="pdi_stat_label">Matched</span>
-                                <span class="pdi_stat_value"><field name="matched_line_count" readonly="1"/></span>
-                            </div>
-                            <div class="pdi_stat_tile pdi_warning_tile">
-                                <span class="pdi_stat_label">Unmatched</span>
-                                <span class="pdi_stat_value"><field name="unmatched_line_count" readonly="1"/></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="alert alert-info pdi_info_banner" role="alert" invisible="state == 'created'">
-                        <strong>Human review required.</strong>
-                        Upload a PDF, image, XLSX, or CSV file and click <strong>Analyze Document</strong>. No RFQ is created until you click
-                        <strong>Confirm &amp; Create RFQ</strong>.
-                    </div>
-                    <div class="alert alert-warning" role="alert" invisible="not extraction_error">
-                        <field name="extraction_error" nolabel="1" readonly="1"/>
-                    </div>
 
                     <div class="oe_button_box" name="button_box">
                         <button class="oe_stat_button"
@@ -210,57 +173,58 @@
                         </button>
                     </div>
 
-                    <notebook class="pdi_notebook">
-                        <page string="Overview">
-                            <div class="pdi_section_grid">
-                                <div class="pdi_section_card">
-                                    <div class="pdi_section_title">Source Document</div>
-                                    <group col="2">
-                                        <field name="document_name" readonly="state == 'created'"/>
-                                        <field name="source_document_id" readonly="1" options="{'no_create': True}"/>
-                                        <field name="source_file" filename="source_filename" readonly="state == 'created'"/>
-                                        <field name="source_format" readonly="1" invisible="not source_format"/>
-                                        <field name="company_id" groups="base.group_multi_company" readonly="state == 'created'"/>
-                                        <field name="source_filename" invisible="1"/>
-                                    </group>
-                                </div>
-                                <div class="pdi_section_card">
-                                    <div class="pdi_section_title">Purchase Header</div>
-                                    <group col="2">
-                                        <field name="partner_id" required="state in ['review', 'error']" readonly="state == 'created'"/>
-                                        <field name="vendor_reference" readonly="state == 'created'"/>
-                                        <field name="order_date" readonly="state == 'created'"/>
-                                        <field name="currency_id" required="1" readonly="state == 'created'"/>
-                                    </group>
-                                </div>
-                            </div>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
 
-                            <div class="pdi_section_grid">
-                                <div class="pdi_section_card" invisible="not extracted_by_ai">
-                                    <div class="pdi_section_title">Extracted Vendor Details</div>
-                                    <group col="2">
-                                        <field name="vendor_name_raw" readonly="1"/>
-                                        <field name="vendor_email_raw" readonly="1"/>
-                                        <field name="vendor_vat_raw" readonly="1"/>
-                                        <field name="extraction_summary" readonly="1"/>
-                                    </group>
-                                </div>
-                                <div class="pdi_section_card">
-                                    <div class="pdi_section_title">Processing Trace</div>
-                                    <group col="2">
-                                        <field name="ai_provider_used" readonly="1" invisible="not ai_provider_used"/>
-                                        <field name="ai_model_used" readonly="1" invisible="not ai_model_used"/>
-                                        <field name="ai_last_analyzed_at" readonly="1" invisible="not ai_last_analyzed_at"/>
-                                        <field name="purchase_order_id" readonly="1" invisible="not purchase_order_id"/>
-                                    </group>
-                                </div>
-                            </div>
-                        </page>
+                    <div class="alert alert-info" role="alert" invisible="state not in ['queued', 'processing']">
+                        This document is in the automatic FIFO processing queue. Earlier uploads are processed first.
+                    </div>
+                    <div class="alert alert-danger" role="alert" invisible="not has_unresolved_blockers">
+                        <strong>RFQ creation is blocked.</strong>
+                        There are <field name="blocking_exception_count" class="oe_inline" readonly="1"/> unresolved blocking exception(s).
+                        Open the <strong>Exceptions</strong> tab, correct the issue where required, enter a resolution, and acknowledge each block.
+                    </div>
+                    <div class="alert alert-warning" role="alert" invisible="warning_exception_count == 0">
+                        <strong>Review warning.</strong>
+                        There are <field name="warning_exception_count" class="oe_inline" readonly="1"/> warning(s). Warnings do not block <strong>Confirm &amp; Create RFQ</strong>.
+                    </div>
+                    <div class="alert alert-warning" role="alert" invisible="not extraction_error">
+                        <field name="extraction_error" nolabel="1" readonly="1"/>
+                    </div>
 
+                    <group>
+                        <group string="Source Document">
+                            <field name="document_name" readonly="state == 'created'"/>
+                            <field name="source_document_id" readonly="1" options="{'no_create': True}"/>
+                            <field name="source_file" filename="source_filename" readonly="state == 'created'"/>
+                            <field name="source_format" readonly="1" invisible="not source_format"/>
+                            <field name="source_filename" invisible="1"/>
+                            <field name="company_id" groups="base.group_multi_company" readonly="state == 'created'"/>
+                        </group>
+                        <group string="Purchase Header">
+                            <field name="partner_id" readonly="state == 'created'"/>
+                            <field name="vendor_reference" readonly="state == 'created'"/>
+                            <field name="order_date" readonly="state == 'created'"/>
+                            <field name="currency_id" required="1" readonly="state == 'created'"/>
+                            <field name="total_amount" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group string="Extracted Information" invisible="not extracted_by_ai">
+                        <group>
+                            <field name="vendor_name_raw" readonly="1"/>
+                            <field name="vendor_email_raw" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="vendor_vat_raw" readonly="1"/>
+                            <field name="ai_provider_used" readonly="1" invisible="not ai_provider_used"/>
+                        </group>
+                    </group>
+
+                    <notebook>
                         <page string="Line Review" name="lines">
-                            <div class="pdi_line_hint">
-                                Review every extracted line carefully. If a product is unmatched or ambiguous, select the correct Odoo product before creating the RFQ.
-                            </div>
                             <field name="line_ids" readonly="state == 'created'">
                                 <list editable="bottom" decoration-warning="not product_id">
                                     <field name="sequence" widget="handle"/>
@@ -278,10 +242,33 @@
                             </field>
                         </page>
 
+                        <page string="Exceptions" name="exceptions" invisible="not extracted_by_ai">
+                            <p class="text-muted">
+                                <strong>Block</strong> exceptions require a resolution and acknowledgement before RFQ creation.
+                                <strong>Warning</strong> exceptions are informational and never block RFQ creation.
+                            </p>
+                            <field name="exception_ids" nolabel="1">
+                                <list editable="bottom" create="false" delete="false" decoration-danger="exception_type == 'block' and not acknowledged" decoration-warning="exception_type == 'warning'" decoration-success="acknowledged">
+                                    <field name="exception_type" widget="badge" readonly="1"/>
+                                    <field name="title" readonly="1"/>
+                                    <field name="message" readonly="1"/>
+                                    <field name="resolution" readonly="exception_type != 'block' or acknowledged"/>
+                                    <field name="acknowledged" widget="boolean_toggle" readonly="1"/>
+                                    <field name="acknowledged_by" optional="hide" readonly="1"/>
+                                    <field name="acknowledged_at" optional="hide" readonly="1"/>
+                                    <button name="action_acknowledge"
+                                            type="object"
+                                            string="Acknowledge"
+                                            class="btn-link"
+                                            invisible="exception_type != 'block' or acknowledged"/>
+                                </list>
+                            </field>
+                        </page>
+
                         <page string="Notes">
                             <group>
                                 <group>
-                                    <field name="notes" placeholder="Commercial notes copied to the RFQ if the Purchase model supports it." readonly="state == 'created'"/>
+                                    <field name="notes" placeholder="Commercial notes copied to the RFQ if supported." readonly="state == 'created'"/>
                                 </group>
                                 <group>
                                     <field name="extraction_summary" placeholder="Extraction warnings and uncertainties" readonly="1"/>
@@ -290,7 +277,16 @@
                         </page>
 
                         <page string="Technical" groups="base.group_system">
-                            <field name="ai_payload" readonly="1"/>
+                            <group>
+                                <group>
+                                    <field name="ai_model_used" readonly="1"/>
+                                    <field name="ai_last_analyzed_at" readonly="1"/>
+                                </group>
+                                <group>
+                                    <field name="source_checksum" readonly="1"/>
+                                    <field name="ai_payload" readonly="1"/>
+                                </group>
+                            </group>
                         </page>
                     </notebook>
                 </sheet>
