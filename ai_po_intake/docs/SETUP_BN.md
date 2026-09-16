@@ -12,7 +12,7 @@ Apps থেকে **AI Purchase Document Preview** module Upgrade করুন�
 
 - Active Provider: **Google Gemini**
 - Gemini API Key: আপনার Google AI Studio key
-- Gemini Model: default `gemini-2.5-flash` (প্রয়োজনে change করতে পারবেন)
+- Gemini Model: default `gemini-3.6-flash` (প্রয়োজনে change করতে পারবেন)
 - Gemini Endpoint: `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`
 - Save
 - **Test Connection** চাপুন

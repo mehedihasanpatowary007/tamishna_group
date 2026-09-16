@@ -3,7 +3,7 @@
     <record id="default_ai_purchase_provider_config" model="ai.purchase.provider.config">
         <field name="name">AI Purchase Provider</field>
         <field name="provider">gemini</field>
-        <field name="gemini_model">gemini-2.5-flash</field>
+        <field name="gemini_model">gemini-3.6-flash</field>
         <field name="openai_model">gpt-5.6-luna</field>
         <field name="request_timeout">90</field>
         <field name="max_file_size_mb">20</field>

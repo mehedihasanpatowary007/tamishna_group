@@ -24,7 +24,7 @@ class AIPurchaseProviderConfig(models.Model):
     )
 
     gemini_api_key = fields.Char(string="Gemini API Key")
-    gemini_model = fields.Char(string="Gemini Model", default="gemini-2.5-flash", required=True)
+    gemini_model = fields.Char(string="Gemini Model", default="gemini-3.6-flash", required=True)
     gemini_endpoint = fields.Char(
         string="Gemini Endpoint",
         default="https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
@@ -190,12 +190,8 @@ Rules:
             ],
             "generationConfig": {
                 "temperature": 0,
-                "responseFormat": {
-                    "text": {
-                        "mimeType": "application/json",
-                        "schema": schema,
-                    }
-                },
+                "responseMimeType": "application/json",
+                "responseSchema": schema,
             },
         }
         try:
@@ -315,7 +311,19 @@ Rules:
                 raise UserError(_("Enter a Gemini API key first."))
             model = (self.gemini_model or "").strip()
             endpoint = (self.gemini_endpoint or "").strip().format(model=quote(model, safe=""))
-            body = {"contents": [{"parts": [{"text": "Reply with exactly OK"}]}]}
+            body = {
+                "contents": [{"parts": [{"text": 'Return JSON with exactly one field: {"status":"OK"}'}]}],
+                "generationConfig": {
+                    "temperature": 0,
+                    "responseMimeType": "application/json",
+                    "responseSchema": {
+                        "type": "object",
+                        "properties": {"status": {"type": "string"}},
+                        "required": ["status"],
+                        "additionalProperties": False,
+                    },
+                },
+            }
             headers = {"x-goog-api-key": self.gemini_api_key, "Content-Type": "application/json"}
         else:
             if not self.openai_api_key:
