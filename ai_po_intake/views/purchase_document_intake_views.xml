@@ -4,7 +4,7 @@
         <field name="name">ai.purchase.intake.search</field>
         <field name="model">ai.purchase.intake</field>
         <field name="arch" type="xml">
-            <search string="AI Purchase Previews">
+            <search string="Purchase Document Previews">
                 <field name="name"/>
                 <field name="document_name"/>
                 <field name="partner_id"/>
@@ -25,7 +25,7 @@
         <field name="name">ai.purchase.intake.list</field>
         <field name="model">ai.purchase.intake</field>
         <field name="arch" type="xml">
-            <list string="AI Purchase Previews" decoration-warning="state == 'error'" decoration-success="state == 'created'">
+            <list string="Purchase Document Previews" decoration-warning="state == 'error'" decoration-success="state == 'created'">
                 <field name="name"/>
                 <field name="document_name" optional="show"/>
                 <field name="partner_id"/>
@@ -44,7 +44,7 @@
         <field name="name">ai.purchase.intake.form</field>
         <field name="model">ai.purchase.intake</field>
         <field name="arch" type="xml">
-            <form string="AI Purchase Preview">
+            <form string="Purchase Document Preview">
                 <header>
                     <button name="action_analyze_uploaded_document"
                             type="object"
@@ -75,8 +75,8 @@
                 <sheet>
                     <div class="alert alert-info" role="alert" invisible="state == 'created'">
                         <strong>Human review required.</strong>
-                        Upload a PDF/image and click <strong>Analyze Document</strong>. The module calls the provider selected in
-                        AI PO Intake &gt; Configuration directly. No Purchase Order/RFQ is created until you click
+                        Upload a PDF, image, XLSX, or CSV file and click <strong>Analyze Document</strong>. The module calls the provider selected in
+                        Purchase Document Intake &gt; Configuration directly. No Purchase Order/RFQ is created until you click
                         <strong>Confirm &amp; Create RFQ</strong>.
                     </div>
                     <div class="alert alert-warning" role="alert" invisible="not extraction_error">
@@ -91,7 +91,7 @@
                             <field name="purchase_order_id" widget="statinfo" string="RFQ / PO"/>
                         </button>
                     </div>
-                    <widget name="web_ribbon" title="AI Extracted" bg_color="text-bg-info" invisible="not extracted_by_ai"/>
+                    <widget name="web_ribbon" title="Extracted" bg_color="text-bg-info" invisible="not extracted_by_ai"/>
                     <div class="oe_title">
                         <label for="name"/>
                         <h1><field name="name"/></h1>
@@ -103,6 +103,7 @@
                             <field name="source_document_id" readonly="1" options="{'no_create': True}"/>
                             <field name="source_file" filename="source_filename" readonly="state == 'created'"/>
                             <field name="source_filename" invisible="1"/>
+                            <field name="source_format" readonly="1" invisible="not source_format"/>
                             <field name="company_id" groups="base.group_multi_company" readonly="state == 'created'"/>
                             <field name="ai_provider_used" readonly="1" invisible="not ai_provider_used"/>
                             <field name="ai_model_used" readonly="1" invisible="not ai_model_used"/>
@@ -151,7 +152,7 @@
                         </page>
                         <page string="Notes">
                             <field name="notes" placeholder="Notes copied to the RFQ if the Purchase model supports it." readonly="state == 'created'"/>
-                            <field name="extraction_summary" placeholder="AI warnings / uncertainties" readonly="1"/>
+                            <field name="extraction_summary" placeholder="Extraction warnings / uncertainties" readonly="1"/>
                         </page>
                         <page string="Technical" groups="base.group_system">
                             <field name="ai_payload" readonly="1"/>
@@ -164,14 +165,14 @@
     </record>
 
     <record id="action_ai_purchase_intake" model="ir.actions.act_window">
-        <field name="name">AI Purchase Previews</field>
+        <field name="name">Document Previews</field>
         <field name="res_model">ai.purchase.intake</field>
         <field name="view_mode">list,form</field>
         <field name="search_view_id" ref="view_ai_purchase_intake_search"/>
         <field name="context">{}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">No purchase previews yet</p>
-            <p>Create a preview, upload a supplier PDF/image, and click Analyze Document. The configured Gemini/OpenAI provider extracts the data; a human must confirm before an RFQ is created.</p>
+            <p>Create a preview, upload a supplier PDF, image, XLSX, or CSV file, and click Analyze Document. The configured provider extracts the data; a human must confirm before an RFQ is created.</p>
         </field>
     </record>
 </odoo>

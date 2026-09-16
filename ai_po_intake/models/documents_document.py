@@ -5,7 +5,7 @@ from odoo.exceptions import UserError
 class DocumentsDocument(models.Model):
     _inherit = "documents.document"
 
-    def action_ai_po_analyze_configured_provider(self):
+    def action_purchase_document_analyze_provider(self):
         self.ensure_one()
         attachment = self.attachment_id if "attachment_id" in self._fields else False
         if not attachment or not attachment.exists() or attachment.type != "binary":
@@ -41,10 +41,11 @@ class DocumentsDocument(models.Model):
             result["model"],
             source_document_id=self.id,
             document_name=self.name,
+            source_format=result.get("source_format", ""),
         )
         return {
             "type": "ir.actions.act_window",
-            "name": _("AI Purchase Preview"),
+            "name": _("Purchase Document Preview"),
             "res_model": "ai.purchase.intake",
             "res_id": preview.id,
             "view_mode": "form",

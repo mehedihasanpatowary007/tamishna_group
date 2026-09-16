@@ -4,7 +4,7 @@
         <field name="name">ai.purchase.provider.config.form</field>
         <field name="model">ai.purchase.provider.config</field>
         <field name="arch" type="xml">
-            <form string="AI Provider Configuration" create="0" delete="0">
+            <form string="Provider Configuration" create="0" delete="0">
                 <header>
                     <button name="action_test_connection" type="object" string="Test Connection" class="btn-primary"/>
                 </header>
@@ -20,7 +20,7 @@
                         </group>
                         <group string="How routing works">
                             <div class="text-muted">
-                                The module calls the selected provider directly. Odoo native Sort With AI is not used for extraction.
+                                The module calls the selected provider directly. Odoo native document sorting is not used for extraction.
                                 Switching Active Provider immediately changes which endpoint is called by Analyze Document.
                             </div>
                         </group>
@@ -52,7 +52,7 @@
     </record>
 
     <record id="action_ai_purchase_provider_config" model="ir.actions.act_window">
-        <field name="name">AI Provider Configuration</field>
+        <field name="name">Provider Configuration</field>
         <field name="res_model">ai.purchase.provider.config</field>
         <field name="res_id" eval="ref('default_ai_purchase_provider_config')"/>
         <field name="view_mode">form</field>

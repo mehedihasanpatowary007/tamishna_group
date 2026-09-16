@@ -1,42 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Keep the previous XML IDs for safe upgrades, but disable native Odoo AI routing. -->
+    <!-- Legacy records are retained under their original XML IDs so upgrades are safe. -->
     <record id="ai_tool_create_po_preview_from_document" model="ir.actions.server">
-        <field name="name">PO Intake: Legacy Native AI Preview Tool (Disabled)</field>
+        <field name="name">Purchase Intake: Legacy Preview Tool (Disabled)</field>
         <field name="model_id" ref="documents.model_documents_document"/>
         <field name="state">code</field>
         <field name="use_in_ai" eval="False"/>
         <field name="binding_model_id" eval="False"/>
         <field name="code"><![CDATA[
-raise UserError('This legacy Odoo AI tool is disabled. Use PO Intake: Analyze Document (Configured Provider).')
+raise UserError('This legacy preview tool is disabled. Use Purchase Intake: Analyze Supplier Document.')
         ]]></field>
     </record>
 
     <record id="ai_tool_create_po_preview_from_agent" model="ir.actions.server">
-        <field name="name">PO Intake: Legacy Agent Preview Tool (Disabled)</field>
+        <field name="name">Purchase Intake: Legacy Agent Tool (Disabled)</field>
         <field name="model_id" ref="base.model_res_users"/>
         <field name="state">code</field>
         <field name="use_in_ai" eval="False"/>
         <field name="code"><![CDATA[
-raise UserError('This legacy Odoo AI tool is disabled. Use the configured provider flow.')
+raise UserError('This legacy tool is disabled. Use the configured provider workflow.')
         ]]></field>
     </record>
 
     <record id="action_document_analyze_configured_provider" model="ir.actions.server">
-        <field name="name">PO Intake: Analyze Document (Configured Provider)</field>
+        <field name="name">Purchase Intake: Analyze Supplier Document</field>
         <field name="model_id" ref="documents.model_documents_document"/>
         <field name="binding_model_id" ref="documents.model_documents_document"/>
         <field name="binding_view_types">list,form</field>
         <field name="state">code</field>
         <field name="code"><![CDATA[
 if len(records) == 1:
-    action = records.action_ai_po_analyze_configured_provider()
+    action = records.action_purchase_document_analyze_provider()
 else:
     action = {
         'type': 'ir.actions.client',
         'tag': 'display_notification',
         'params': {
-            'title': 'AI PO Intake',
+            'title': 'Purchase Document Intake',
             'message': 'Select exactly one supplier document to analyze.',
             'type': 'warning',
             'sticky': False,

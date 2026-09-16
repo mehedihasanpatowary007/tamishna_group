@@ -1,55 +1,32 @@
-# Odoo 19 — AI PO Intake Provider Setup (Bangla)
+# Odoo 19 — Purchase Document Intake Setup
 
-## 1. Module upgrade করুন
+## Upgrade
 
-Apps থেকে **AI Purchase Document Preview** module Upgrade করুন। Version: `19.0.1.1.0`.
+Apps থেকে **Purchase Document Intake** module Upgrade করুন।
 
-## 2. Provider configure করুন
+## Provider Configuration
 
-`AI PO Intake → Configuration`
+`Purchase Document Intake → Configuration`
 
-### Gemini ব্যবহার করতে চাইলে
-
-- Active Provider: **Google Gemini**
-- Gemini API Key: আপনার Google AI Studio key
-- Gemini Model: default `gemini-3.6-flash` (প্রয়োজনে change করতে পারবেন)
-- Gemini Endpoint: `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`
-- Save
+- Active Provider: Google Gemini অথবা OpenAI
+- API Key দিন
+- Model এবং Endpoint ঠিক করুন
 - **Test Connection** চাপুন
 
-### OpenAI ব্যবহার করতে চাইলে
+## Test from preview screen
 
-- Active Provider: **OpenAI**
-- OpenAI API Key: আপনার OpenAI API key
-- OpenAI Model: default `gpt-5.6-luna` (প্রয়োজনে change করতে পারবেন)
-- OpenAI Endpoint: `https://api.openai.com/v1/responses`
-- Save
-- **Test Connection** চাপুন
+`Purchase Document Intake → Document Previews → New`
 
-শুধু `Active Provider` যেটা select করবেন, Analyze করার সময় সেই provider-এর endpoint call হবে।
-
-## 3. AI PO Intake screen থেকে test
-
-`AI PO Intake → Purchase Previews → New`
-
-1. Uploaded Document-এ PDF/image upload করুন
+1. Uploaded Document-এ PDF, image, XLSX অথবা CSV দিন
 2. **Analyze Document** চাপুন
-3. AI extraction শেষে একই preview-তে Vendor, Reference, Date, Currency এবং Lines আসবে
-4. Product unmatched হলে Odoo Product manually select করুন
-5. সব ঠিক থাকলে **Confirm & Create RFQ** চাপুন
+3. Vendor, Reference, Date, Currency এবং Lines review করুন
+4. Product match না হলে Odoo Product manually select করুন
+5. **Confirm & Create RFQ** চাপুন
 
-## 4. Documents app থেকে test
+## Excel
 
-Documents-এ PDF upload করুন → file select করুন → Actions →
+`.xlsx` file Odoo-এর ভিতরে locally parse হয়। তারপর extracted worksheet text configured provider-এ যায়। `.xls` ব্যবহার করলে আগে `.xlsx` হিসেবে save করুন।
 
-**PO Intake: Analyze Document (Configured Provider)**
+## Documents app
 
-এটা Odoo native `Sort With AI` ব্যবহার করে না। Module নিজে Configuration দেখে Gemini/OpenAI endpoint call করে।
-
-## 5. Safety
-
-AI কখনও সরাসরি PO confirm করে না। Extraction শুধু preview বানায়। Human confirm করার পর draft RFQ তৈরি হয়।
-
-
-## v19.0.1.1.2 Gemini compatibility
-Gemini structured extraction now requests `application/json` without sending `responseSchema`. The exact purchase JSON shape is enforced in the prompt and validated/parsing is still performed by the module. This avoids REST schema compatibility errors across current Gemini 3.x models.
+Documents app-এ একটি file select করে Actions থেকে **Purchase Intake: Analyze Supplier Document** চালানো যায়।

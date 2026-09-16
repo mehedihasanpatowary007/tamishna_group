@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <menuitem id="menu_ai_purchase_root"
-              name="AI PO Intake"
+              name="Purchase Document Intake"
               sequence="55"
+              web_icon="ai_po_intake,static/description/icon.png"
               groups="purchase.group_purchase_user"/>
 
     <menuitem id="menu_ai_purchase_previews"
-              name="Purchase Previews"
+              name="Document Previews"
               parent="menu_ai_purchase_root"
               action="action_ai_purchase_intake"
               sequence="10"

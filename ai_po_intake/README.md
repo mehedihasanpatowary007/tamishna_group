@@ -1,43 +1,43 @@
-# AI Purchase Document Preview — Odoo 19
+# Purchase Document Intake — Odoo 19
 
-This version uses a **module-owned AI provider configuration**. It does not rely on Odoo Documents `Sort With AI` for extraction.
+A human-review workflow for supplier documents:
 
-## Provider routing
+1. Upload a supplier PDF, image, XLSX, or CSV file.
+2. Click **Analyze Document**.
+3. The configured provider (Google Gemini or OpenAI) extracts purchasing data.
+4. Review vendor, reference, date, currency, products, quantities, and prices.
+5. Click **Confirm & Create RFQ** to create a draft RFQ.
 
-Go to **AI PO Intake → Configuration** and choose exactly one active provider:
+## Supported files
 
-- Google Gemini
-- OpenAI
+- PDF
+- PNG / JPG / JPEG / WEBP images
+- Excel `.xlsx` / `.xlsm`
+- CSV
 
-Configure the API key, model, and endpoint. The **Analyze Document** button and the Documents contextual action call only the selected provider endpoint.
+Legacy `.xls` is intentionally not supported; save it as `.xlsx` first.
 
-Default endpoints:
+## Excel processing
 
-- Gemini: `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`
-- OpenAI: `https://api.openai.com/v1/responses`
+Excel workbooks are parsed locally inside Odoo using Python's standard library. The module converts worksheet values to structured text and then sends that text to the selected provider for normalization/extraction. This avoids sending the raw Excel package as an unsupported document type.
 
-## Workflow A — from AI PO Intake
+## Provider configuration
 
-1. AI PO Intake → Purchase Previews → New
-2. Upload supplier PDF/image in **Uploaded Document**
-3. Click **Analyze Document**
-4. Review vendor, reference, date, currency and extracted lines
-5. Match any unmatched Odoo products
-6. Click **Confirm & Create RFQ**
-7. A draft `purchase.order` is created; it is not automatically confirmed
+Go to **Purchase Document Intake → Configuration** and choose Google Gemini or OpenAI. The Analyze Document action always uses the provider selected there.
 
-## Workflow B — from Documents
+## Upgrade note
 
-1. Upload/select a supplier file in Odoo Documents
-2. Actions → **PO Intake: Analyze Document (Configured Provider)**
-3. The module calls the configured provider directly
-4. A Purchase Preview opens
-5. Review and click **Confirm & Create RFQ**
-
-## Important
-
-The old native Odoo AI tools shipped in earlier versions of this module are disabled on upgrade so they do not route through Odoo's own provider selection.
+The technical model/XML identifiers from earlier releases are retained for safe in-place upgrades, while all user-facing names and new preview references use the professional Purchase Document Intake naming.
 
 
-## v19.0.1.1.2 Gemini compatibility
-Gemini structured extraction now requests `application/json` without sending `responseSchema`. The exact purchase JSON shape is enforced in the prompt and validated/parsing is still performed by the module. This avoids REST schema compatibility errors across current Gemini 3.x models.
+## App / Dashboard Icon
+
+Replace this file with your own PNG logo:
+
+`ai_po_intake/static/description/icon.png`
+
+The same image is used for:
+- the module icon in Apps
+- the Purchase Document Intake icon in the Odoo app launcher/dashboard
+
+Recommended: square PNG, ideally 512x512 px. Keep the filename exactly `icon.png`.

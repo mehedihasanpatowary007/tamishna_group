@@ -9,9 +9,9 @@ from odoo.exceptions import UserError, ValidationError
 _logger = logging.getLogger(__name__)
 
 
-class AIPurchaseIntake(models.Model):
+class PurchaseDocumentIntake(models.Model):
     _name = "ai.purchase.intake"
-    _description = "AI Purchase Document Preview"
+    _description = "Purchase Document Preview"
     _inherit = ["mail.thread", "mail.activity.mixin"]
     _order = "create_date desc, id desc"
 
@@ -59,19 +59,20 @@ class AIPurchaseIntake(models.Model):
     )
     source_filename = fields.Char(string="File Name", copy=False)
     document_name = fields.Char(string="Document Name", tracking=True)
-    ai_payload = fields.Json(string="AI Payload", copy=False, readonly=True)
-    extracted_by_ai = fields.Boolean(string="Extracted by AI", copy=False, readonly=True)
-    extraction_summary = fields.Text(string="AI Extraction Notes", copy=False, readonly=True)
+    source_format = fields.Char(string="Source Format", copy=False, readonly=True)
+    ai_payload = fields.Json(string="Provider Payload", copy=False, readonly=True)
+    extracted_by_ai = fields.Boolean(string="Extracted", copy=False, readonly=True)
+    extraction_summary = fields.Text(string="Extraction Notes", copy=False, readonly=True)
     extraction_error = fields.Text(string="Extraction / Validation Error", copy=False, readonly=True)
     ai_provider_used = fields.Selection(
         [("gemini", "Google Gemini"), ("openai", "OpenAI")],
-        string="AI Provider Used",
+        string="Provider Used",
         copy=False,
         readonly=True,
         tracking=True,
     )
-    ai_model_used = fields.Char(string="AI Model Used", copy=False, readonly=True)
-    ai_last_analyzed_at = fields.Datetime(string="Last AI Analysis", copy=False, readonly=True)
+    ai_model_used = fields.Char(string="Model Used", copy=False, readonly=True)
+    ai_last_analyzed_at = fields.Datetime(string="Last Analysis", copy=False, readonly=True)
 
     # Header preview
     vendor_name_raw = fields.Char(string="Extracted Vendor Name", tracking=True)
@@ -130,8 +131,17 @@ class AIPurchaseIntake(models.Model):
     def create(self, vals_list):
         for vals in vals_list:
             if vals.get("name", _("New")) == _("New"):
-                vals["name"] = self.env["ir.sequence"].next_by_code("ai.purchase.intake") or _("New")
+                vals["name"] = self.env["ir.sequence"].next_by_code("purchase.document.intake") or _("New")
         return super().create(vals_list)
+
+    @api.model
+    def migrate_legacy_preview_references(self):
+        """Remove the old visible AI-PO prefix without disturbing new numbering."""
+        legacy = self.sudo().search([("name", "like", "AI-PO-%")])
+        for rec in legacy:
+            suffix = (rec.name or "")[len("AI-PO-"):]
+            rec.name = "PDI/LEGACY/%s" % suffix
+        return True
 
     @api.constrains("purchase_order_id")
     def _check_purchase_order_company(self):
@@ -140,7 +150,7 @@ class AIPurchaseIntake(models.Model):
                 raise ValidationError(_("The created RFQ/PO must belong to the same company as the preview."))
 
     # -------------------------------------------------------------------------
-    # AI helpers
+    # Extraction helpers
     # -------------------------------------------------------------------------
     @api.model
     def _normalize_text(self, value):
@@ -155,7 +165,7 @@ class AIPurchaseIntake(models.Model):
         if isinstance(value, (int, float)):
             return float(value)
         text = str(value).strip().replace(",", "")
-        # Keep only a common numeric representation. AI sometimes emits currency symbols.
+        # Keep only a common numeric representation. Providers sometimes emit currency symbols.
         cleaned = "".join(ch for ch in text if ch.isdigit() or ch in ".-")
         try:
             return float(cleaned)
@@ -276,11 +286,11 @@ class AIPurchaseIntake(models.Model):
             try:
                 data = json.loads(raw)
             except json.JSONDecodeError as exc:
-                raise UserError(_("AI returned invalid line JSON: %s") % exc) from exc
+                raise UserError(_("The provider returned invalid line JSON: %s") % exc) from exc
             if isinstance(data, dict):
                 data = data.get("lines", [])
         if not isinstance(data, list):
-            raise UserError(_("The AI line payload must be a JSON list."))
+            raise UserError(_("The line payload must be a JSON list."))
         return [item for item in data if isinstance(item, dict)]
 
     @api.model
@@ -290,11 +300,7 @@ class AIPurchaseIntake(models.Model):
         source_document_id=False,
         document_name="",
     ):
-        """Create a review preview from one JSON payload supplied by an Odoo AI tool.
-
-        A single AI-schema argument keeps the native Odoo AI Tool configuration simple
-        and avoids version-specific schema model details in module XML.
-        """
+        """Legacy compatibility helper for older native automation integrations."""
         if isinstance(payload_json, dict):
             payload = payload_json
         else:
@@ -305,9 +311,9 @@ class AIPurchaseIntake(models.Model):
                 try:
                     payload = json.loads(raw)
                 except json.JSONDecodeError as exc:
-                    raise UserError(_("AI returned invalid payload JSON: %s") % exc) from exc
+                    raise UserError(_("The provider returned invalid payload JSON: %s") % exc) from exc
         if not isinstance(payload, dict):
-            raise UserError(_("The AI payload must be a JSON object."))
+            raise UserError(_("The provider payload must be a JSON object."))
 
         lines = payload.get("lines", payload.get("order_lines", payload.get("items", [])))
         return self.ai_create_preview(
@@ -482,7 +488,7 @@ class AIPurchaseIntake(models.Model):
         preview = self.create(vals)
         preview.message_post(
             body=_(
-                "AI extraction created this preview. %s of %s line(s) matched automatically; %s ambiguous line(s). "
+                "Document extraction created this preview. %s of %s line(s) matched automatically; %s ambiguous line(s). "
                 "Review every field before creating the RFQ."
             )
             % (stats["matched_count"], stats["line_count"], stats["ambiguous_count"])
@@ -505,6 +511,7 @@ class AIPurchaseIntake(models.Model):
         model_name,
         source_document_id=False,
         document_name="",
+        source_format="",
     ):
         self.ensure_one()
         lines = payload.get("lines", payload.get("order_lines", payload.get("items", [])))
@@ -527,11 +534,12 @@ class AIPurchaseIntake(models.Model):
             "ai_provider_used": provider,
             "ai_model_used": model_name,
             "ai_last_analyzed_at": fields.Datetime.now(),
+            "source_format": source_format or self.source_format,
         })
         self.write(vals)
         self.message_post(
             body=_(
-                "Document analyzed directly with %s (%s). %s of %s line(s) matched automatically."
+                "Document processed with %s (%s). %s of %s line(s) matched automatically."
             )
             % (provider, model_name, stats["matched_count"], stats["line_count"])
         )
@@ -542,7 +550,7 @@ class AIPurchaseIntake(models.Model):
         if self.purchase_order_id:
             raise UserError(_("This preview already has an RFQ/PO and cannot be re-analyzed."))
         if not self.source_file:
-            raise UserError(_("Upload a PDF or image in Uploaded Document first."))
+            raise UserError(_("Upload a PDF, image, XLSX, or CSV file in Uploaded Document first."))
 
         filename = self.source_filename or self.document_name or "purchase_document.pdf"
         mimetype = mimetypes.guess_type(filename)[0] or "application/pdf"
@@ -554,6 +562,7 @@ class AIPurchaseIntake(models.Model):
                 result["provider"],
                 result["model"],
                 document_name=self.document_name or filename,
+                source_format=result.get("source_format", ""),
             )
         except UserError as exc:
             self.write({"state": "error", "extraction_error": str(exc)})
@@ -561,7 +570,7 @@ class AIPurchaseIntake(models.Model):
 
         return {
             "type": "ir.actions.act_window",
-            "name": _("AI Purchase Preview"),
+            "name": _("Purchase Document Preview"),
             "res_model": "ai.purchase.intake",
             "res_id": self.id,
             "view_mode": "form",
@@ -714,7 +723,7 @@ class AIPurchaseIntake(models.Model):
             body=_("RFQ %s was created after human confirmation. The RFQ remains in draft and is not automatically confirmed.")
             % po.display_name
         )
-        po.message_post(body=_("Created from AI purchase preview %s.") % self.name)
+        po.message_post(body=_("Created from purchase document preview %s.") % self.name)
 
         return {
             "type": "ir.actions.act_window",
@@ -739,9 +748,9 @@ class AIPurchaseIntake(models.Model):
         }
 
 
-class AIPurchaseIntakeLine(models.Model):
+class PurchaseDocumentIntakeLine(models.Model):
     _name = "ai.purchase.intake.line"
-    _description = "AI Purchase Document Preview Line"
+    _description = "Purchase Document Preview Line"
     _order = "sequence, id"
 
     intake_id = fields.Many2one(

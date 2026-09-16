@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <record id="rule_ai_purchase_intake_company" model="ir.rule">
-        <field name="name">AI purchase previews: multi-company</field>
+        <field name="name">Purchase document previews: multi-company</field>
         <field name="model_id" ref="model_ai_purchase_intake"/>
         <field name="domain_force">[('company_id', 'in', company_ids)]</field>
         <field name="groups" eval="[(4, ref('purchase.group_purchase_user'))]"/>
     </record>
 
     <record id="rule_ai_purchase_intake_line_company" model="ir.rule">
-        <field name="name">AI purchase preview lines: multi-company</field>
+        <field name="name">Purchase document preview lines: multi-company</field>
         <field name="model_id" ref="model_ai_purchase_intake_line"/>
         <field name="domain_force">[('company_id', 'in', company_ids)]</field>
         <field name="groups" eval="[(4, ref('purchase.group_purchase_user'))]"/>
