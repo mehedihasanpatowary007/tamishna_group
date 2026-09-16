@@ -1,5 +1,6 @@
 import json
 import logging
+import mimetypes
 from datetime import datetime, time
 
 from odoo import api, fields, models, _
@@ -62,6 +63,15 @@ class AIPurchaseIntake(models.Model):
     extracted_by_ai = fields.Boolean(string="Extracted by AI", copy=False, readonly=True)
     extraction_summary = fields.Text(string="AI Extraction Notes", copy=False, readonly=True)
     extraction_error = fields.Text(string="Extraction / Validation Error", copy=False, readonly=True)
+    ai_provider_used = fields.Selection(
+        [("gemini", "Google Gemini"), ("openai", "OpenAI")],
+        string="AI Provider Used",
+        copy=False,
+        readonly=True,
+        tracking=True,
+    )
+    ai_model_used = fields.Char(string="AI Model Used", copy=False, readonly=True)
+    ai_last_analyzed_at = fields.Datetime(string="Last AI Analysis", copy=False, readonly=True)
 
     # Header preview
     vendor_name_raw = fields.Char(string="Extracted Vendor Name", tracking=True)
@@ -315,7 +325,7 @@ class AIPurchaseIntake(models.Model):
         )
 
     @api.model
-    def ai_create_preview(
+    def _prepare_preview_vals(
         self,
         source_document_id=False,
         document_name="",
@@ -328,33 +338,10 @@ class AIPurchaseIntake(models.Model):
         notes="",
         lines_json="",
         extraction_summary="",
+        company=False,
     ):
-        """Create a review record from structured values supplied by Odoo AI.
-
-        This method deliberately creates ONLY the staging/preview record. It never creates
-        or confirms a purchase.order. The human must use the Confirm & Create RFQ button.
-        """
         source_document = self.env["documents.document"].browse(int(source_document_id or 0)).exists()
-
-        # Avoid duplicate staging records if the same Documents automation is triggered twice.
-        if source_document:
-            existing = self.search(
-                [("source_document_id", "=", source_document.id), ("state", "!=", "cancelled")],
-                order="id desc",
-                limit=1,
-            )
-            if existing:
-                return {
-                    "success": True,
-                    "preview_id": existing.id,
-                    "preview_reference": existing.name,
-                    "line_count": len(existing.line_ids),
-                    "matched_line_count": len(existing.line_ids.filtered("product_id")),
-                    "unmatched_line_count": len(existing.line_ids.filtered(lambda line: not line.product_id)),
-                    "message": _("A purchase preview already exists for this document: %s") % existing.name,
-                }
-
-        company = self.env.company
+        company = company or self.env.company
         if source_document and "company_id" in source_document._fields and source_document.company_id:
             company = source_document.company_id
 
@@ -385,10 +372,8 @@ class AIPurchaseIntake(models.Model):
                 ambiguous_count += 1
 
             qty = self._parse_number(item.get("quantity", item.get("qty", 0.0)))
-            price = self._parse_number(
-                item.get("unit_price", item.get("price", item.get("rate", 0.0)))
-            )
-            uom = (product.uom_id if product else False)
+            price = self._parse_number(item.get("unit_price", item.get("price", item.get("rate", 0.0))))
+            uom = product.uom_id if product else False
 
             line_commands.append(
                 fields.Command.create(
@@ -427,6 +412,7 @@ class AIPurchaseIntake(models.Model):
             "line_ids": line_commands,
             "extracted_by_ai": True,
             "extraction_summary": self._normalize_text(extraction_summary),
+            "extraction_error": False,
             "ai_payload": {
                 "vendor_name": vendor_name,
                 "vendor_email": vendor_email,
@@ -438,28 +424,148 @@ class AIPurchaseIntake(models.Model):
                 "lines": parsed_lines,
             },
         }
+        stats = {
+            "partner": partner,
+            "line_count": len(parsed_lines),
+            "matched_count": matched_count,
+            "ambiguous_count": ambiguous_count,
+        }
+        return vals, stats
 
+    @api.model
+    def ai_create_preview(
+        self,
+        source_document_id=False,
+        document_name="",
+        vendor_name="",
+        vendor_email="",
+        vendor_vat="",
+        vendor_reference="",
+        order_date="",
+        currency_code="",
+        notes="",
+        lines_json="",
+        extraction_summary="",
+    ):
+        """Create only a staging/review record. Never create or confirm a purchase.order."""
+        source_document = self.env["documents.document"].browse(int(source_document_id or 0)).exists()
+        if source_document:
+            existing = self.search(
+                [("source_document_id", "=", source_document.id), ("state", "!=", "cancelled")],
+                order="id desc",
+                limit=1,
+            )
+            if existing:
+                return {
+                    "success": True,
+                    "preview_id": existing.id,
+                    "preview_reference": existing.name,
+                    "line_count": len(existing.line_ids),
+                    "matched_line_count": len(existing.line_ids.filtered("product_id")),
+                    "unmatched_line_count": len(existing.line_ids.filtered(lambda line: not line.product_id)),
+                    "message": _("A purchase preview already exists for this document: %s") % existing.name,
+                }
+
+        vals, stats = self._prepare_preview_vals(
+            source_document_id=source_document_id,
+            document_name=document_name,
+            vendor_name=vendor_name,
+            vendor_email=vendor_email,
+            vendor_vat=vendor_vat,
+            vendor_reference=vendor_reference,
+            order_date=order_date,
+            currency_code=currency_code,
+            notes=notes,
+            lines_json=lines_json,
+            extraction_summary=extraction_summary,
+        )
         preview = self.create(vals)
         preview.message_post(
             body=_(
                 "AI extraction created this preview. %s of %s line(s) matched automatically; %s ambiguous line(s). "
                 "Review every field before creating the RFQ."
             )
-            % (matched_count, len(parsed_lines), ambiguous_count)
+            % (stats["matched_count"], stats["line_count"], stats["ambiguous_count"])
         )
-
         return {
             "success": True,
             "preview_id": preview.id,
             "preview_reference": preview.name,
-            "matched_vendor": partner.display_name if partner else False,
-            "line_count": len(parsed_lines),
-            "matched_line_count": matched_count,
-            "unmatched_line_count": len(parsed_lines) - matched_count,
-            "message": _(
-                "Purchase preview %s was created. Human review is required; no RFQ/PO has been created yet."
+            "matched_vendor": stats["partner"].display_name if stats["partner"] else False,
+            "line_count": stats["line_count"],
+            "matched_line_count": stats["matched_count"],
+            "unmatched_line_count": stats["line_count"] - stats["matched_count"],
+            "message": _("Purchase preview %s was created. Human review is required; no RFQ/PO has been created yet.") % preview.name,
+        }
+
+    def apply_provider_payload(
+        self,
+        payload,
+        provider,
+        model_name,
+        source_document_id=False,
+        document_name="",
+    ):
+        self.ensure_one()
+        lines = payload.get("lines", payload.get("order_lines", payload.get("items", [])))
+        vals, stats = self._prepare_preview_vals(
+            source_document_id=source_document_id or self.source_document_id.id,
+            document_name=document_name or self.document_name or self.source_filename,
+            vendor_name=payload.get("vendor_name", ""),
+            vendor_email=payload.get("vendor_email", ""),
+            vendor_vat=payload.get("vendor_vat", payload.get("vendor_tax_id", "")),
+            vendor_reference=payload.get("vendor_reference", payload.get("reference", "")),
+            order_date=payload.get("order_date", payload.get("date", "")),
+            currency_code=payload.get("currency_code", payload.get("currency", "")),
+            notes=payload.get("notes", ""),
+            lines_json=lines,
+            extraction_summary=payload.get("extraction_summary", payload.get("warnings", "")),
+            company=self.company_id,
+        )
+        vals["line_ids"] = [fields.Command.clear()] + vals["line_ids"]
+        vals.update({
+            "ai_provider_used": provider,
+            "ai_model_used": model_name,
+            "ai_last_analyzed_at": fields.Datetime.now(),
+        })
+        self.write(vals)
+        self.message_post(
+            body=_(
+                "Document analyzed directly with %s (%s). %s of %s line(s) matched automatically."
             )
-            % preview.name,
+            % (provider, model_name, stats["matched_count"], stats["line_count"])
+        )
+        return stats
+
+    def action_analyze_uploaded_document(self):
+        self.ensure_one()
+        if self.purchase_order_id:
+            raise UserError(_("This preview already has an RFQ/PO and cannot be re-analyzed."))
+        if not self.source_file:
+            raise UserError(_("Upload a PDF or image in Uploaded Document first."))
+
+        filename = self.source_filename or self.document_name or "purchase_document.pdf"
+        mimetype = mimetypes.guess_type(filename)[0] or "application/pdf"
+        config = self.env["ai.purchase.provider.config"].get_active_config()
+        try:
+            result = config.analyze_binary(self.source_file, filename, mimetype)
+            self.apply_provider_payload(
+                result["payload"],
+                result["provider"],
+                result["model"],
+                document_name=self.document_name or filename,
+            )
+        except UserError as exc:
+            self.write({"state": "error", "extraction_error": str(exc)})
+            raise
+
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("AI Purchase Preview"),
+            "res_model": "ai.purchase.intake",
+            "res_id": self.id,
+            "view_mode": "form",
+            "target": "current",
         }
 
     # -------------------------------------------------------------------------

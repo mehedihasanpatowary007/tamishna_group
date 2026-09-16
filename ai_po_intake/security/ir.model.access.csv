@@ -3,3 +3,4 @@ access_ai_purchase_intake_user,ai.purchase.intake purchase user,model_ai_purchas
 access_ai_purchase_intake_manager,ai.purchase.intake purchase manager,model_ai_purchase_intake,purchase.group_purchase_manager,1,1,1,1
 access_ai_purchase_intake_line_user,ai.purchase.intake.line purchase user,model_ai_purchase_intake_line,purchase.group_purchase_user,1,1,1,1
 access_ai_purchase_intake_line_manager,ai.purchase.intake.line purchase manager,model_ai_purchase_intake_line,purchase.group_purchase_manager,1,1,1,1
+access_ai_purchase_provider_config_system,ai.purchase.provider.config system,model_ai_purchase_provider_config,base.group_system,1,1,1,1

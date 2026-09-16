@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_ai_purchase_provider_config_form" model="ir.ui.view">
+        <field name="name">ai.purchase.provider.config.form</field>
+        <field name="model">ai.purchase.provider.config</field>
+        <field name="arch" type="xml">
+            <form string="AI Provider Configuration" create="0" delete="0">
+                <header>
+                    <button name="action_test_connection" type="object" string="Test Connection" class="btn-primary"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group string="Provider Routing">
+                            <field name="provider" widget="radio"/>
+                            <field name="request_timeout"/>
+                            <field name="max_file_size_mb"/>
+                        </group>
+                        <group string="How routing works">
+                            <div class="text-muted">
+                                The module calls the selected provider directly. Odoo native Sort With AI is not used for extraction.
+                                Switching Active Provider immediately changes which endpoint is called by Analyze Document.
+                            </div>
+                        </group>
+                    </group>
+
+                    <group string="Google Gemini" invisible="provider != 'gemini'">
+                        <group>
+                            <field name="gemini_api_key" password="True" required="provider == 'gemini'"/>
+                            <field name="gemini_model" required="provider == 'gemini'"/>
+                        </group>
+                        <group>
+                            <field name="gemini_endpoint" required="provider == 'gemini'"/>
+                            <div class="text-muted">Use <strong>{model}</strong> in the endpoint where the model name must be inserted.</div>
+                        </group>
+                    </group>
+
+                    <group string="OpenAI" invisible="provider != 'openai'">
+                        <group>
+                            <field name="openai_api_key" password="True" required="provider == 'openai'"/>
+                            <field name="openai_model" required="provider == 'openai'"/>
+                        </group>
+                        <group>
+                            <field name="openai_endpoint" required="provider == 'openai'"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_ai_purchase_provider_config" model="ir.actions.act_window">
+        <field name="name">AI Provider Configuration</field>
+        <field name="res_model">ai.purchase.provider.config</field>
+        <field name="res_id" eval="ref('default_ai_purchase_provider_config')"/>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_ai_purchase_provider_config_form"/>
+        <field name="target">current</field>
+    </record>
+</odoo>

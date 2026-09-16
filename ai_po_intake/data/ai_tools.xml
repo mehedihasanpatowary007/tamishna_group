@@ -1,40 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!--
-        Odoo 19 native AI Tool (Documents context).
-        Important: Odoo 19 marks tools with use_in_ai=True. The generic `usage`
-        selection must stay at its normal server-action value.
-
-        AI Schema is intentionally configured from the UI because its storage model
-        is an Enterprise implementation detail that has changed across 19.x builds.
-        See docs/SETUP_BN.md. Only one argument is required: payload_json.
-    -->
+    <!-- Keep the previous XML IDs for safe upgrades, but disable native Odoo AI routing. -->
     <record id="ai_tool_create_po_preview_from_document" model="ir.actions.server">
-        <field name="name">PO Intake: Create Review Preview (Document)</field>
+        <field name="name">PO Intake: Legacy Native AI Preview Tool (Disabled)</field>
         <field name="model_id" ref="documents.model_documents_document"/>
         <field name="state">code</field>
-        <field name="use_in_ai" eval="True"/>
+        <field name="use_in_ai" eval="False"/>
+        <field name="binding_model_id" eval="False"/>
         <field name="code"><![CDATA[
-payload = payload_json if 'payload_json' in dir() else '{}'
-ai['result'] = env['ai.purchase.intake'].ai_create_preview_from_payload(
-    payload_json=payload,
-    source_document_id=record.id,
-    document_name=record.name,
-)
+raise UserError('This legacy Odoo AI tool is disabled. Use PO Intake: Analyze Document (Configured Provider).')
         ]]></field>
     </record>
 
-    <!-- Agent/topic tool. The user/agent extracts the uploaded document and supplies one JSON payload. -->
     <record id="ai_tool_create_po_preview_from_agent" model="ir.actions.server">
-        <field name="name">PO Intake: Create Review Preview (Agent)</field>
+        <field name="name">PO Intake: Legacy Agent Preview Tool (Disabled)</field>
         <field name="model_id" ref="base.model_res_users"/>
         <field name="state">code</field>
-        <field name="use_in_ai" eval="True"/>
+        <field name="use_in_ai" eval="False"/>
         <field name="code"><![CDATA[
-payload = payload_json if 'payload_json' in dir() else '{}'
-ai['result'] = env['ai.purchase.intake'].ai_create_preview_from_payload(
-    payload_json=payload,
-)
+raise UserError('This legacy Odoo AI tool is disabled. Use the configured provider flow.')
+        ]]></field>
+    </record>
+
+    <record id="action_document_analyze_configured_provider" model="ir.actions.server">
+        <field name="name">PO Intake: Analyze Document (Configured Provider)</field>
+        <field name="model_id" ref="documents.model_documents_document"/>
+        <field name="binding_model_id" ref="documents.model_documents_document"/>
+        <field name="binding_view_types">list,form</field>
+        <field name="state">code</field>
+        <field name="code"><![CDATA[
+if len(records) == 1:
+    action = records.action_ai_po_analyze_configured_provider()
+else:
+    action = {
+        'type': 'ir.actions.client',
+        'tag': 'display_notification',
+        'params': {
+            'title': 'AI PO Intake',
+            'message': 'Select exactly one supplier document to analyze.',
+            'type': 'warning',
+            'sticky': False,
+        },
+    }
         ]]></field>
     </record>
 </odoo>

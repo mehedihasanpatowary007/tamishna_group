@@ -1,37 +1,39 @@
 # AI Purchase Document Preview — Odoo 19
 
-This module implements a human-in-the-loop purchase document workflow on top of **Odoo 19 native AI**:
+This version uses a **module-owned AI provider configuration**. It does not rely on Odoo Documents `Sort With AI` for extraction.
 
-1. Upload a supplier quotation / order document to Odoo Documents or provide it to a configured AI Agent.
-2. Odoo AI extracts the supplier, reference, date, currency and purchase lines.
-3. The included AI Tool creates an **AI Purchase Preview** staging record.
-4. A purchase user reviews / edits the vendor and product matches.
-5. Only when the user clicks **Confirm & Create RFQ** does the module create `purchase.order` and `purchase.order.line` records.
-6. The created Purchase record remains a **draft RFQ**. This module never auto-confirms a Purchase Order.
+## Provider routing
 
-## Dependencies
+Go to **AI PO Intake → Configuration** and choose exactly one active provider:
 
-- Purchase
-- Documents
-- AI (`ai_app`)
-- Mail
+- Google Gemini
+- OpenAI
 
-## Odoo models
+Configure the API key, model, and endpoint. The **Analyze Document** button and the Documents contextual action call only the selected provider endpoint.
 
-- `ai.purchase.intake` — review header / staging record
-- `ai.purchase.intake.line` — review lines
-- `purchase.order` — created only after human confirmation
-- `purchase.order.line` — created only after human confirmation
+Default endpoints:
 
-## Native AI tools installed by this module
+- Gemini: `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`
+- OpenAI: `https://api.openai.com/v1/responses`
 
-- **PO Intake: Create Review Preview (Document)** — model `documents.document`. Use this with Documents → AI Auto-sort / an AI Server Action on the Document model.
-- **PO Intake: Create Review Preview (Agent)** — model `res.users`. This is available for a custom Agent/Topic where your Odoo build supports the relevant chat/file context.
+## Workflow A — from AI PO Intake
 
-The tool arguments are installed automatically in `ir.actions.server.schema.arg` by the module's post-init hook.
+1. AI PO Intake → Purchase Previews → New
+2. Upload supplier PDF/image in **Uploaded Document**
+3. Click **Analyze Document**
+4. Review vendor, reference, date, currency and extracted lines
+5. Match any unmatched Odoo products
+6. Click **Confirm & Create RFQ**
+7. A draft `purchase.order` is created; it is not automatically confirmed
 
-See `docs/SETUP_BN.md` for a Bangla setup guide and copy/paste prompts.
+## Workflow B — from Documents
 
-## 19.0.1.0.2 compatibility fix
+1. Upload/select a supplier file in Odoo Documents
+2. Actions → **PO Intake: Analyze Document (Configured Provider)**
+3. The module calls the configured provider directly
+4. A Purchase Preview opens
+5. Review and click **Confirm & Create RFQ**
 
-Odoo 19 does **not** accept `ir.actions.server.usage = 'ai_tool'`. Native AI tools are standard server actions with `use_in_ai = True`. This version uses that mechanism and depends explicitly on `ai_server_actions`. AI Schema is configured once in the standard Odoo UI using the single `payload_json` argument; see `docs/SETUP_BN.md`.
+## Important
+
+The old native Odoo AI tools shipped in earlier versions of this module are disabled on upgrade so they do not route through Odoo's own provider selection.
