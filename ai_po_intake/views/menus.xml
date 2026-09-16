@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_ai_purchase_root"
+              name="AI PO Intake"
+              sequence="55"
+              groups="purchase.group_purchase_user"/>
+
+    <menuitem id="menu_ai_purchase_previews"
+              name="Purchase Previews"
+              parent="menu_ai_purchase_root"
+              action="action_ai_purchase_intake"
+              sequence="10"
+              groups="purchase.group_purchase_user"/>
+</odoo>

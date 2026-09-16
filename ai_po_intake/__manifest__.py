@@ -1,0 +1,25 @@
+{
+    "name": "AI Purchase Document Preview",
+    "summary": "Use Odoo AI to extract purchase documents into a reviewable preview before creating an RFQ/PO",
+    "version": "19.0.1.0.0",
+    "category": "Purchases",
+    "author": "Custom",
+    "license": "LGPL-3",
+    "depends": [
+        "purchase",
+        "documents",
+        "ai_app",
+        "mail",
+    ],
+    "data": [
+        "security/ir.model.access.csv",
+        "security/security.xml",
+        "data/sequence.xml",
+        "data/ai_tools.xml",
+        "views/ai_purchase_intake_views.xml",
+        "views/menus.xml",
+    ],
+    "post_init_hook": "post_init_hook",
+    "installable": True,
+    "application": True,
+}
