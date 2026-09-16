@@ -26,10 +26,12 @@ class PurchaseDocumentIntake(models.Model):
     state = fields.Selection(
         [
             ("draft", "Draft"),
+            ("queued", "Queued"),
+            ("processing", "Processing"),
             ("review", "Waiting Review"),
             ("created", "RFQ Created"),
-            ("cancelled", "Cancelled"),
             ("error", "Needs Attention"),
+            ("cancelled", "Cancelled"),
         ],
         string="Status",
         default="draft",
@@ -557,7 +559,7 @@ class PurchaseDocumentIntake(models.Model):
         )
         return stats
 
-    def action_analyze_uploaded_document(self):
+    def _run_document_analysis(self):
         self.ensure_one()
         if self.purchase_order_id:
             raise UserError(_("This preview already has an RFQ/PO and cannot be re-analyzed."))
@@ -567,18 +569,28 @@ class PurchaseDocumentIntake(models.Model):
         filename = self.source_filename or self.document_name or "purchase_document.pdf"
         mimetype = mimetypes.guess_type(filename)[0] or "application/pdf"
         config = self.env["ai.purchase.provider.config"].get_active_config()
+        result = config.analyze_binary(self.source_file, filename, mimetype)
+        self.apply_provider_payload(
+            result["payload"],
+            result["provider"],
+            result["model"],
+            document_name=self.document_name or filename,
+            source_format=result.get("source_format", ""),
+        )
+        return result
+
+    def action_analyze_uploaded_document(self):
+        self.ensure_one()
         try:
-            result = config.analyze_binary(self.source_file, filename, mimetype)
-            self.apply_provider_payload(
-                result["payload"],
-                result["provider"],
-                result["model"],
-                document_name=self.document_name or filename,
-                source_format=result.get("source_format", ""),
-            )
+            self.write({"state": "processing", "extraction_error": False})
+            self._run_document_analysis()
         except UserError as exc:
             self.write({"state": "error", "extraction_error": str(exc)})
             raise
+        except Exception as exc:  # noqa: BLE001
+            _logger.exception("Unexpected document analysis error for %s", self.display_name)
+            self.write({"state": "error", "extraction_error": str(exc)})
+            raise UserError(_("Document processing failed: %s") % exc) from exc
 
         return {
             "type": "ir.actions.act_window",
@@ -588,6 +600,38 @@ class PurchaseDocumentIntake(models.Model):
             "view_mode": "form",
             "target": "current",
         }
+
+    def action_process_now(self):
+        for rec in self:
+            if rec.purchase_order_id:
+                continue
+            try:
+                rec.write({"state": "processing", "extraction_error": False})
+                rec._run_document_analysis()
+            except Exception as exc:  # noqa: BLE001
+                _logger.exception("Queue processing failed for %s", rec.display_name)
+                rec.write({"state": "error", "extraction_error": str(exc)})
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Document Queue"),
+            "res_model": "ai.purchase.intake",
+            "view_mode": "kanban,list,form",
+            "domain": [("state", "in", ["queued", "processing", "error"])],
+            "context": {"search_default_group_state": 1},
+            "target": "current",
+        }
+
+    @api.model
+    def cron_process_queue(self, batch_size=5):
+        queued = self.sudo().search([("state", "=", "queued"), ("purchase_order_id", "=", False)], order="create_date, id", limit=batch_size)
+        for rec in queued:
+            try:
+                rec.write({"state": "processing", "extraction_error": False})
+                rec._run_document_analysis()
+            except Exception as exc:  # noqa: BLE001
+                _logger.exception("Queued purchase document failed for %s", rec.display_name)
+                rec.write({"state": "error", "extraction_error": str(exc)})
+        return True
 
     # -------------------------------------------------------------------------
     # Human workflow

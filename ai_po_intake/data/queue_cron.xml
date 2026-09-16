@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="ir_cron_purchase_document_queue" model="ir.cron">
+        <field name="name">Purchase Document Intake: Process Queue</field>
+        <field name="model_id" ref="model_ai_purchase_intake"/>
+        <field name="state">code</field>
+        <field name="code">model.cron_process_queue(batch_size=5)</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">minutes</field>
+        <field name="active" eval="True"/>
+    </record>
+</odoo>

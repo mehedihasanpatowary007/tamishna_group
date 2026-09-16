@@ -13,6 +13,20 @@
               sequence="10"
               groups="purchase.group_purchase_user"/>
 
+    <menuitem id="menu_purchase_document_upload"
+              name="Upload Documents"
+              parent="menu_ai_purchase_root"
+              action="action_purchase_document_upload_wizard"
+              sequence="20"
+              groups="purchase.group_purchase_user"/>
+
+    <menuitem id="menu_purchase_document_queue"
+              name="Processing Queue"
+              parent="menu_ai_purchase_root"
+              action="action_purchase_document_queue"
+              sequence="30"
+              groups="purchase.group_purchase_user"/>
+
     <menuitem id="menu_ai_purchase_provider_config"
               name="Configuration"
               parent="menu_ai_purchase_root"

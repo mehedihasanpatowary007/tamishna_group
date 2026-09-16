@@ -10,6 +10,8 @@
                 <field name="partner_id"/>
                 <field name="vendor_reference"/>
                 <field name="ai_provider_used"/>
+                <filter name="queued" string="Queued" domain="[('state', '=', 'queued')]"/>
+                <filter name="processing" string="Processing" domain="[('state', '=', 'processing')]"/>
                 <filter name="review" string="Waiting Review" domain="[('state', '=', 'review')]"/>
                 <filter name="draft" string="Draft" domain="[('state', '=', 'draft')]"/>
                 <filter name="created" string="RFQ Created" domain="[('state', '=', 'created')]"/>
@@ -29,7 +31,7 @@
         <field name="name">ai.purchase.intake.kanban</field>
         <field name="model">ai.purchase.intake</field>
         <field name="arch" type="xml">
-            <kanban class="o_kanban_mobile pdi_kanban_view" default_group_by="state" records_draggable="false">
+            <kanban class="o_kanban_mobile pdi_kanban_view" default_group_by="state" records_draggable="false" group_create="false" quick_create="false">
                 <field name="name"/>
                 <field name="document_name"/>
                 <field name="partner_id"/>
@@ -131,7 +133,12 @@
                             type="object"
                             string="Analyze Document"
                             class="btn-primary"
-                            invisible="not source_file or purchase_order_id"/>
+                            invisible="not source_file or purchase_order_id or state in ['queued', 'processing']"/>
+                    <button name="action_process_now"
+                            type="object"
+                            string="Process Now"
+                            class="btn-primary"
+                            invisible="state not in ['queued', 'error'] or purchase_order_id"/>
                     <button name="action_create_purchase_order"
                             type="object"
                             string="Confirm &amp; Create RFQ"
@@ -151,7 +158,7 @@
                             type="object"
                             string="Cancel"
                             invisible="state in ['created', 'cancelled'] or purchase_order_id"/>
-                    <field name="state" widget="statusbar" statusbar_visible="draft,review,error,created,cancelled"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,queued,processing,review,error,created,cancelled"/>
                 </header>
                 <sheet>
                     <widget name="web_ribbon" title="Processed" bg_color="text-bg-info" invisible="not extracted_by_ai"/>
@@ -304,4 +311,50 @@
             <p>Create a preview, upload a supplier PDF, image, XLSX, or CSV file, run the analysis, review the extracted data, and then create a draft RFQ.</p>
         </field>
     </record>
+
+    <record id="view_purchase_document_upload_wizard_form" model="ir.ui.view">
+        <field name="name">purchase.document.upload.wizard.form</field>
+        <field name="model">purchase.document.upload.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Upload Purchase Documents" class="pdi_upload_wizard">
+                <sheet>
+                    <div class="pdi_upload_panel">
+                        <div class="pdi_kicker">Bulk Intake</div>
+                        <h2>Upload multiple supplier documents</h2>
+                        <p class="text-muted">
+                            Add PDF, image, Excel, or CSV documents. Each file is added to the processing queue and will move to Waiting Review after extraction.
+                        </p>
+                        <field name="attachment_ids" widget="many2many_binary" nolabel="1"/>
+                    </div>
+                </sheet>
+                <footer>
+                    <button name="action_enqueue_documents" type="object" string="Add to Queue" class="btn-primary"/>
+                    <button string="Cancel" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_purchase_document_upload_wizard" model="ir.actions.act_window">
+        <field name="name">Upload Documents</field>
+        <field name="res_model">purchase.document.upload.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_purchase_document_upload_wizard_form"/>
+        <field name="target">new</field>
+    </record>
+
+    <record id="action_purchase_document_queue" model="ir.actions.act_window">
+        <field name="name">Processing Queue</field>
+        <field name="res_model">ai.purchase.intake</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="search_view_id" ref="view_ai_purchase_intake_search"/>
+        <field name="domain">[("state", "in", ["queued", "processing", "error"])]</field>
+        <field name="context">{"search_default_group_state": 1}</field>
+        <field name="help" type="html">
+            <div class="o_view_nocontent_smiling_face"/>
+            <h2>The processing queue is clear</h2>
+            <p>Use Upload Documents to add multiple supplier files. Queued files are processed automatically and move to Waiting Review when complete.</p>
+        </field>
+    </record>
+
 </odoo>

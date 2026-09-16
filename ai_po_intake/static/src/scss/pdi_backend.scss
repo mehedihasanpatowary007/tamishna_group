@@ -235,3 +235,62 @@
         }
     }
 }
+
+.o_web_client {
+    .pdi_kanban_view .o_kanban_record {
+        height: 420px;
+        min-height: 420px;
+        display: flex;
+    }
+
+    .pdi_kanban_view .pdi_kanban_card {
+        height: 100%;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .pdi_kanban_view .pdi_vendor_block {
+        min-height: 72px;
+    }
+
+    .pdi_kanban_view .pdi_vendor_block .text-muted,
+    .pdi_kanban_view .pdi_vendor_name,
+    .pdi_kanban_view .pdi_card_title {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .pdi_kanban_view .pdi_meta_row {
+        min-height: 34px;
+        margin-top: auto;
+    }
+
+    .pdi_upload_wizard .modal-body {
+        padding: 0;
+    }
+
+    .pdi_upload_panel {
+        border: 1px solid var(--pdi-border, #e8e4f3);
+        border-radius: 18px;
+        background: linear-gradient(135deg, #faf8ff 0%, #f5fbfb 100%);
+        padding: 22px;
+        box-shadow: 0 12px 28px rgba(34, 26, 58, 0.08);
+    }
+
+    .pdi_upload_panel h2 {
+        color: #2e2450;
+        font-weight: 700;
+        margin-bottom: 6px;
+    }
+
+    .pdi_upload_panel .o_field_many2many_binary {
+        margin-top: 16px;
+        padding: 14px;
+        background: #fff;
+        border: 1px dashed #c9bee5;
+        border-radius: 14px;
+    }
+}
