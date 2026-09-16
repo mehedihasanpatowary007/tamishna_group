@@ -9,15 +9,93 @@
                 <field name="document_name"/>
                 <field name="partner_id"/>
                 <field name="vendor_reference"/>
-                <filter name="waiting_review" string="Waiting Review" domain="[('state', 'in', ['review', 'error'])]"/>
+                <field name="ai_provider_used"/>
+                <filter name="review" string="Waiting Review" domain="[('state', '=', 'review')]"/>
+                <filter name="draft" string="Draft" domain="[('state', '=', 'draft')]"/>
                 <filter name="created" string="RFQ Created" domain="[('state', '=', 'created')]"/>
+                <filter name="attention" string="Needs Attention" domain="[('state', '=', 'error')]"/>
                 <separator/>
                 <group>
                     <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
                     <filter name="group_vendor" string="Vendor" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_provider" string="Provider" context="{'group_by': 'ai_provider_used'}"/>
                     <filter name="group_company" string="Company" context="{'group_by': 'company_id'}" groups="base.group_multi_company"/>
                 </group>
             </search>
+        </field>
+    </record>
+
+    <record id="view_ai_purchase_intake_kanban" model="ir.ui.view">
+        <field name="name">ai.purchase.intake.kanban</field>
+        <field name="model">ai.purchase.intake</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_mobile pdi_kanban_view" default_group_by="state" records_draggable="false">
+                <field name="name"/>
+                <field name="document_name"/>
+                <field name="partner_id"/>
+                <field name="vendor_reference"/>
+                <field name="order_date"/>
+                <field name="total_amount"/>
+                <field name="currency_id"/>
+                <field name="state"/>
+                <field name="line_count"/>
+                <field name="matched_line_count"/>
+                <field name="unmatched_line_count"/>
+                <field name="source_format"/>
+                <field name="ai_provider_used"/>
+                <field name="purchase_order_id"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="oe_kanban_global_click pdi_kanban_card">
+                            <div class="pdi_kanban_card_top">
+                                <div>
+                                    <div class="pdi_kicker">Preview</div>
+                                    <div class="pdi_card_title"><field name="name"/></div>
+                                </div>
+                                <field name="state" widget="badge"/>
+                            </div>
+
+                            <div class="pdi_vendor_block">
+                                <div class="pdi_vendor_name"><field name="partner_id"/></div>
+                                <t t-if="record.vendor_reference.raw_value">
+                                    <div class="text-muted">Ref: <field name="vendor_reference"/></div>
+                                </t>
+                                <t t-if="record.document_name.raw_value">
+                                    <div class="text-muted"><field name="document_name"/></div>
+                                </t>
+                            </div>
+
+                            <div class="pdi_metrics_row">
+                                <div class="pdi_metric_box">
+                                    <span class="pdi_metric_label">Total</span>
+                                    <span class="pdi_metric_value"><field name="total_amount" widget="monetary" options="{'currency_field': 'currency_id'}"/></span>
+                                </div>
+                                <div class="pdi_metric_box">
+                                    <span class="pdi_metric_label">Lines</span>
+                                    <span class="pdi_metric_value"><field name="line_count"/></span>
+                                </div>
+                                <div class="pdi_metric_box">
+                                    <span class="pdi_metric_label">Matched</span>
+                                    <span class="pdi_metric_value"><field name="matched_line_count"/></span>
+                                </div>
+                                <div class="pdi_metric_box pdi_metric_box_warning">
+                                    <span class="pdi_metric_label">Unmatched</span>
+                                    <span class="pdi_metric_value"><field name="unmatched_line_count"/></span>
+                                </div>
+                            </div>
+
+                            <div class="pdi_meta_row">
+                                <t t-if="record.source_format.raw_value"><span>Format: <field name="source_format"/></span></t>
+                                <t t-if="record.ai_provider_used.raw_value"><span>Provider: <field name="ai_provider_used"/></span></t>
+                            </div>
+
+                            <t t-if="record.purchase_order_id.raw_value">
+                                <div class="pdi_footer_hint">RFQ / PO linked</div>
+                            </t>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
         </field>
     </record>
 
@@ -31,9 +109,12 @@
                 <field name="partner_id"/>
                 <field name="vendor_reference" optional="show"/>
                 <field name="order_date" optional="show"/>
+                <field name="line_count" optional="show"/>
+                <field name="matched_line_count" optional="show"/>
+                <field name="unmatched_line_count" optional="show"/>
                 <field name="total_amount" sum="Total"/>
                 <field name="currency_id" column_invisible="True"/>
-                <field name="unmatched_line_count" optional="show"/>
+                <field name="ai_provider_used" optional="show"/>
                 <field name="state" widget="badge"/>
                 <field name="company_id" groups="base.group_multi_company" optional="hide"/>
             </list>
@@ -44,7 +125,7 @@
         <field name="name">ai.purchase.intake.form</field>
         <field name="model">ai.purchase.intake</field>
         <field name="arch" type="xml">
-            <form string="Purchase Document Preview">
+            <form string="Purchase Document Preview" class="pdi_form_view">
                 <header>
                     <button name="action_analyze_uploaded_document"
                             type="object"
@@ -73,15 +154,45 @@
                     <field name="state" widget="statusbar" statusbar_visible="draft,review,error,created,cancelled"/>
                 </header>
                 <sheet>
-                    <div class="alert alert-info" role="alert" invisible="state == 'created'">
+                    <widget name="web_ribbon" title="Processed" bg_color="text-bg-info" invisible="not extracted_by_ai"/>
+                    <div class="pdi_hero">
+                        <div class="pdi_hero_main">
+                            <div class="pdi_kicker">Purchase Document Intake</div>
+                            <h1 class="pdi_title"><field name="name" readonly="1"/></h1>
+                            <div class="pdi_subtitle">
+                                Clean review workspace for purchase documents. Upload a supplier file, analyze it, review the extracted details,
+                                and only then create the RFQ.
+                            </div>
+                        </div>
+                        <div class="pdi_hero_stats">
+                            <div class="pdi_stat_tile">
+                                <span class="pdi_stat_label">Total</span>
+                                <span class="pdi_stat_value"><field name="total_amount" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="1"/></span>
+                            </div>
+                            <div class="pdi_stat_tile">
+                                <span class="pdi_stat_label">Lines</span>
+                                <span class="pdi_stat_value"><field name="line_count" readonly="1"/></span>
+                            </div>
+                            <div class="pdi_stat_tile">
+                                <span class="pdi_stat_label">Matched</span>
+                                <span class="pdi_stat_value"><field name="matched_line_count" readonly="1"/></span>
+                            </div>
+                            <div class="pdi_stat_tile pdi_warning_tile">
+                                <span class="pdi_stat_label">Unmatched</span>
+                                <span class="pdi_stat_value"><field name="unmatched_line_count" readonly="1"/></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info pdi_info_banner" role="alert" invisible="state == 'created'">
                         <strong>Human review required.</strong>
-                        Upload a PDF, image, XLSX, or CSV file and click <strong>Analyze Document</strong>. The module calls the provider selected in
-                        Purchase Document Intake &gt; Configuration directly. No Purchase Order/RFQ is created until you click
+                        Upload a PDF, image, XLSX, or CSV file and click <strong>Analyze Document</strong>. No RFQ is created until you click
                         <strong>Confirm &amp; Create RFQ</strong>.
                     </div>
                     <div class="alert alert-warning" role="alert" invisible="not extraction_error">
                         <field name="extraction_error" nolabel="1" readonly="1"/>
                     </div>
+
                     <div class="oe_button_box" name="button_box">
                         <button class="oe_stat_button"
                                 type="object"
@@ -91,46 +202,58 @@
                             <field name="purchase_order_id" widget="statinfo" string="RFQ / PO"/>
                         </button>
                     </div>
-                    <widget name="web_ribbon" title="Extracted" bg_color="text-bg-info" invisible="not extracted_by_ai"/>
-                    <div class="oe_title">
-                        <label for="name"/>
-                        <h1><field name="name"/></h1>
-                    </div>
 
-                    <group>
-                        <group string="Source">
-                            <field name="document_name" readonly="state == 'created'"/>
-                            <field name="source_document_id" readonly="1" options="{'no_create': True}"/>
-                            <field name="source_file" filename="source_filename" readonly="state == 'created'"/>
-                            <field name="source_filename" invisible="1"/>
-                            <field name="source_format" readonly="1" invisible="not source_format"/>
-                            <field name="company_id" groups="base.group_multi_company" readonly="state == 'created'"/>
-                            <field name="ai_provider_used" readonly="1" invisible="not ai_provider_used"/>
-                            <field name="ai_model_used" readonly="1" invisible="not ai_model_used"/>
-                            <field name="ai_last_analyzed_at" readonly="1" invisible="not ai_last_analyzed_at"/>
-                        </group>
-                        <group string="Purchase Header">
-                            <field name="partner_id" required="state in ['review', 'error']" readonly="state == 'created'"/>
-                            <field name="vendor_reference" readonly="state == 'created'"/>
-                            <field name="order_date" readonly="state == 'created'"/>
-                            <field name="currency_id" required="1" readonly="state == 'created'"/>
-                            <field name="total_amount" readonly="1"/>
-                        </group>
-                    </group>
+                    <notebook class="pdi_notebook">
+                        <page string="Overview">
+                            <div class="pdi_section_grid">
+                                <div class="pdi_section_card">
+                                    <div class="pdi_section_title">Source Document</div>
+                                    <group col="2">
+                                        <field name="document_name" readonly="state == 'created'"/>
+                                        <field name="source_document_id" readonly="1" options="{'no_create': True}"/>
+                                        <field name="source_file" filename="source_filename" readonly="state == 'created'"/>
+                                        <field name="source_format" readonly="1" invisible="not source_format"/>
+                                        <field name="company_id" groups="base.group_multi_company" readonly="state == 'created'"/>
+                                        <field name="source_filename" invisible="1"/>
+                                    </group>
+                                </div>
+                                <div class="pdi_section_card">
+                                    <div class="pdi_section_title">Purchase Header</div>
+                                    <group col="2">
+                                        <field name="partner_id" required="state in ['review', 'error']" readonly="state == 'created'"/>
+                                        <field name="vendor_reference" readonly="state == 'created'"/>
+                                        <field name="order_date" readonly="state == 'created'"/>
+                                        <field name="currency_id" required="1" readonly="state == 'created'"/>
+                                    </group>
+                                </div>
+                            </div>
 
-                    <group string="Extracted Vendor Values" invisible="not extracted_by_ai">
-                        <group>
-                            <field name="vendor_name_raw" readonly="1"/>
-                            <field name="vendor_email_raw" readonly="1"/>
-                        </group>
-                        <group>
-                            <field name="vendor_vat_raw" readonly="1"/>
-                            <field name="unmatched_line_count" readonly="1"/>
-                        </group>
-                    </group>
+                            <div class="pdi_section_grid">
+                                <div class="pdi_section_card" invisible="not extracted_by_ai">
+                                    <div class="pdi_section_title">Extracted Vendor Details</div>
+                                    <group col="2">
+                                        <field name="vendor_name_raw" readonly="1"/>
+                                        <field name="vendor_email_raw" readonly="1"/>
+                                        <field name="vendor_vat_raw" readonly="1"/>
+                                        <field name="extraction_summary" readonly="1"/>
+                                    </group>
+                                </div>
+                                <div class="pdi_section_card">
+                                    <div class="pdi_section_title">Processing Trace</div>
+                                    <group col="2">
+                                        <field name="ai_provider_used" readonly="1" invisible="not ai_provider_used"/>
+                                        <field name="ai_model_used" readonly="1" invisible="not ai_model_used"/>
+                                        <field name="ai_last_analyzed_at" readonly="1" invisible="not ai_last_analyzed_at"/>
+                                        <field name="purchase_order_id" readonly="1" invisible="not purchase_order_id"/>
+                                    </group>
+                                </div>
+                            </div>
+                        </page>
 
-                    <notebook>
-                        <page string="Preview Lines" name="lines">
+                        <page string="Line Review" name="lines">
+                            <div class="pdi_line_hint">
+                                Review every extracted line carefully. If a product is unmatched or ambiguous, select the correct Odoo product before creating the RFQ.
+                            </div>
                             <field name="line_ids" readonly="state == 'created'">
                                 <list editable="bottom" decoration-warning="not product_id">
                                     <field name="sequence" widget="handle"/>
@@ -146,14 +269,19 @@
                                     <field name="currency_id" column_invisible="True"/>
                                 </list>
                             </field>
-                            <p class="text-muted mt-2">
-                                Unmatched or ambiguous products must be selected manually before RFQ creation.
-                            </p>
                         </page>
+
                         <page string="Notes">
-                            <field name="notes" placeholder="Notes copied to the RFQ if the Purchase model supports it." readonly="state == 'created'"/>
-                            <field name="extraction_summary" placeholder="Extraction warnings / uncertainties" readonly="1"/>
+                            <group>
+                                <group>
+                                    <field name="notes" placeholder="Commercial notes copied to the RFQ if the Purchase model supports it." readonly="state == 'created'"/>
+                                </group>
+                                <group>
+                                    <field name="extraction_summary" placeholder="Extraction warnings and uncertainties" readonly="1"/>
+                                </group>
+                            </group>
                         </page>
+
                         <page string="Technical" groups="base.group_system">
                             <field name="ai_payload" readonly="1"/>
                         </page>
@@ -167,12 +295,13 @@
     <record id="action_ai_purchase_intake" model="ir.actions.act_window">
         <field name="name">Document Previews</field>
         <field name="res_model">ai.purchase.intake</field>
-        <field name="view_mode">list,form</field>
+        <field name="view_mode">kanban,list,form</field>
         <field name="search_view_id" ref="view_ai_purchase_intake_search"/>
         <field name="context">{}</field>
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">No purchase previews yet</p>
-            <p>Create a preview, upload a supplier PDF, image, XLSX, or CSV file, and click Analyze Document. The configured provider extracts the data; a human must confirm before an RFQ is created.</p>
+            <div class="o_view_nocontent_smiling_face"/>
+            <h2>Ready for a clean supplier-document workflow</h2>
+            <p>Create a preview, upload a supplier PDF, image, XLSX, or CSV file, run the analysis, review the extracted data, and then create a draft RFQ.</p>
         </field>
     </record>
 </odoo>

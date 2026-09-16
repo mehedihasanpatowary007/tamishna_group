@@ -4,48 +4,73 @@
         <field name="name">ai.purchase.provider.config.form</field>
         <field name="model">ai.purchase.provider.config</field>
         <field name="arch" type="xml">
-            <form string="Provider Configuration" create="0" delete="0">
+            <form string="Provider Configuration" create="0" delete="0" class="pdi_provider_form">
                 <header>
                     <button name="action_test_connection" type="object" string="Test Connection" class="btn-primary"/>
                 </header>
                 <sheet>
-                    <div class="oe_title">
-                        <h1><field name="name"/></h1>
-                    </div>
-                    <group>
-                        <group string="Provider Routing">
-                            <field name="provider" widget="radio"/>
-                            <field name="request_timeout"/>
-                            <field name="max_file_size_mb"/>
-                        </group>
-                        <group string="How routing works">
-                            <div class="text-muted">
-                                The module calls the selected provider directly. Odoo native document sorting is not used for extraction.
-                                Switching Active Provider immediately changes which endpoint is called by Analyze Document.
+                    <div class="pdi_hero pdi_provider_hero">
+                        <div class="pdi_hero_main">
+                            <div class="pdi_kicker">Purchase Document Intake</div>
+                            <h1 class="pdi_title"><field name="name" readonly="1"/></h1>
+                            <div class="pdi_subtitle">
+                                Configure the extraction provider once, then the intake workflow will route every document directly to the selected endpoint.
                             </div>
-                        </group>
-                    </group>
+                        </div>
+                    </div>
 
-                    <group string="Google Gemini" invisible="provider != 'gemini'">
-                        <group>
-                            <field name="gemini_api_key" password="True" required="provider == 'gemini'"/>
-                            <field name="gemini_model" required="provider == 'gemini'"/>
-                        </group>
-                        <group>
-                            <field name="gemini_endpoint" required="provider == 'gemini'"/>
-                            <div class="text-muted">Use <strong>{model}</strong> in the endpoint where the model name must be inserted.</div>
-                        </group>
-                    </group>
+                    <notebook class="pdi_notebook">
+                        <page string="Routing">
+                            <div class="pdi_section_grid pdi_two_column">
+                                <div class="pdi_section_card">
+                                    <div class="pdi_section_title">Provider Routing</div>
+                                    <group col="2">
+                                        <field name="provider" widget="radio"/>
+                                        <field name="request_timeout"/>
+                                        <field name="max_file_size_mb"/>
+                                    </group>
+                                </div>
+                                <div class="pdi_section_card">
+                                    <div class="pdi_section_title">How This Works</div>
+                                    <div class="text-muted pdi_help_block">
+                                        The module calls the selected provider directly. Odoo native <strong>Sort With AI</strong> is not used for extraction.
+                                        Switching the Active Provider immediately changes which endpoint is called when you click <strong>Analyze Document</strong>.
+                                    </div>
+                                </div>
+                            </div>
+                        </page>
 
-                    <group string="OpenAI" invisible="provider != 'openai'">
-                        <group>
-                            <field name="openai_api_key" password="True" required="provider == 'openai'"/>
-                            <field name="openai_model" required="provider == 'openai'"/>
-                        </group>
-                        <group>
-                            <field name="openai_endpoint" required="provider == 'openai'"/>
-                        </group>
-                    </group>
+                        <page string="Google Gemini">
+                            <div class="pdi_section_card" invisible="provider != 'gemini'">
+                                <div class="pdi_section_title">Google Gemini Settings</div>
+                                <group col="2">
+                                    <field name="gemini_api_key" password="True" required="provider == 'gemini'"/>
+                                    <field name="gemini_model" required="provider == 'gemini'"/>
+                                    <field name="gemini_endpoint" required="provider == 'gemini'"/>
+                                </group>
+                                <div class="text-muted pdi_help_block">
+                                    Use <strong>{model}</strong> in the endpoint where the model name must be inserted.
+                                </div>
+                            </div>
+                            <div class="alert alert-info" role="alert" invisible="provider == 'gemini'">
+                                Select <strong>Google Gemini</strong> in Routing to edit these values.
+                            </div>
+                        </page>
+
+                        <page string="OpenAI">
+                            <div class="pdi_section_card" invisible="provider != 'openai'">
+                                <div class="pdi_section_title">OpenAI Settings</div>
+                                <group col="2">
+                                    <field name="openai_api_key" password="True" required="provider == 'openai'"/>
+                                    <field name="openai_model" required="provider == 'openai'"/>
+                                    <field name="openai_endpoint" required="provider == 'openai'"/>
+                                </group>
+                            </div>
+                            <div class="alert alert-info" role="alert" invisible="provider == 'openai'">
+                                Select <strong>OpenAI</strong> in Routing to edit these values.
+                            </div>
+                        </page>
+                    </notebook>
                 </sheet>
             </form>
         </field>

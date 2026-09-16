@@ -1,7 +1,7 @@
 {
     "name": "Purchase Document Intake",
     "summary": "Extract supplier PDF, image, Excel, and CSV documents, review the data, then create a draft RFQ",
-    "version": "19.0.2.0.1",
+    "version": "19.0.2.1.0",
     "category": "Purchases",
     "author": "Custom",
     "license": "LGPL-3",
@@ -12,6 +12,11 @@
         "ai_server_actions",
         "mail",
     ],
+    "assets": {
+        "web.assets_backend": [
+            "ai_po_intake/static/src/scss/pdi_backend.scss",
+        ],
+    },
     "data": [
         "security/ir.model.access.csv",
         "security/security.xml",

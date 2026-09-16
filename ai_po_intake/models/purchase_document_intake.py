@@ -115,6 +115,16 @@ class PurchaseDocumentIntake(models.Model):
         compute="_compute_totals",
         store=True,
     )
+    line_count = fields.Integer(
+        string="Line Count",
+        compute="_compute_totals",
+        store=True,
+    )
+    matched_line_count = fields.Integer(
+        string="Matched Lines",
+        compute="_compute_totals",
+        store=True,
+    )
     unmatched_line_count = fields.Integer(
         string="Unmatched Lines",
         compute="_compute_totals",
@@ -125,6 +135,8 @@ class PurchaseDocumentIntake(models.Model):
     def _compute_totals(self):
         for rec in self:
             rec.total_amount = sum(rec.line_ids.mapped("subtotal"))
+            rec.line_count = len(rec.line_ids)
+            rec.matched_line_count = len(rec.line_ids.filtered("product_id"))
             rec.unmatched_line_count = len(rec.line_ids.filtered(lambda line: not line.product_id))
 
     @api.model_create_multi
