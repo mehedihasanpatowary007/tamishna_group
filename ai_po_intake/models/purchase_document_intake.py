@@ -622,8 +622,18 @@ class PurchaseDocumentIntake(models.Model):
         }
 
     @api.model
-    def cron_process_queue(self, batch_size=5):
-        queued = self.sudo().search([("state", "=", "queued"), ("purchase_order_id", "=", False)], order="create_date, id", limit=batch_size)
+    def cron_process_queue(self, batch_size=10):
+        """Process the queue in strict oldest-first order.
+
+        Uploads trigger this cron immediately, while the regular cron interval is
+        retained as a safety net. Records are processed one-by-one so the first
+        uploaded queued document reaches review before the next queued document.
+        """
+        Queue = self.sudo()
+        domain = [("state", "=", "queued"), ("purchase_order_id", "=", False)]
+        queued = Queue.search(domain, order="create_date asc, id asc", limit=batch_size)
+        processed = 0
+
         for rec in queued:
             try:
                 rec.write({"state": "processing", "extraction_error": False})
@@ -631,6 +641,13 @@ class PurchaseDocumentIntake(models.Model):
             except Exception as exc:  # noqa: BLE001
                 _logger.exception("Queued purchase document failed for %s", rec.display_name)
                 rec.write({"state": "error", "extraction_error": str(exc)})
+            processed += 1
+
+        remaining = Queue.search_count(domain)
+        # Odoo 19's cron progress API marks the job as partially complete when
+        # work remains, which makes the scheduler re-run it ASAP instead of
+        # waiting for the normal one-minute safety interval.
+        self.env["ir.cron"]._commit_progress(processed=processed, remaining=remaining)
         return True
 
     # -------------------------------------------------------------------------

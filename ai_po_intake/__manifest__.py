@@ -1,7 +1,7 @@
 {
     "name": "Purchase Document Intake",
     "summary": "Extract supplier PDF, image, Excel, and CSV documents, review the data, then create a draft RFQ",
-    "version": "19.0.2.2.1",
+    "version": "19.0.2.2.2",
     "category": "Purchases",
     "author": "Custom",
     "license": "LGPL-3",

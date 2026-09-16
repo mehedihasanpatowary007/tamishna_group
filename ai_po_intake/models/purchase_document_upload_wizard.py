@@ -35,7 +35,10 @@ class PurchaseDocumentUploadWizard(models.TransientModel):
 
         Intake = self.env["ai.purchase.intake"]
         created = Intake.browse()
-        for attachment in self.attachment_ids:
+        # ir.attachment ids follow upload creation order. Sorting explicitly keeps
+        # the bulk intake deterministic: first uploaded = first queued.
+        attachments = self.attachment_ids.sorted(key=lambda attachment: attachment.id)
+        for attachment in attachments:
             self._validate_attachment(attachment)
             filename = attachment.name or "purchase_document"
             mimetype = attachment.mimetype or mimetypes.guess_type(filename)[0] or "application/octet-stream"
@@ -48,7 +51,14 @@ class PurchaseDocumentUploadWizard(models.TransientModel):
                 "source_format": mimetype,
             })
             created |= rec
-            rec.message_post(body=_("Document added to the processing queue from bulk upload."))
+            rec.message_post(body=_("Document added to the automatic FIFO processing queue."))
+
+        # Wake the cron worker immediately after this transaction commits.
+        # The queue processor itself always orders by create_date/id, so older
+        # queued documents are processed before newer ones.
+        cron = self.env.ref("ai_po_intake.ir_cron_purchase_document_queue", raise_if_not_found=False)
+        if cron:
+            cron._trigger()
 
         return {
             "type": "ir.actions.act_window",

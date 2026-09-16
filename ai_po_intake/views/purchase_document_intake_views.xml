@@ -136,9 +136,9 @@
                             invisible="not source_file or purchase_order_id or state in ['queued', 'processing']"/>
                     <button name="action_process_now"
                             type="object"
-                            string="Process Now"
-                            class="btn-primary"
-                            invisible="state not in ['queued', 'error'] or purchase_order_id"/>
+                            string="Retry Processing"
+                            class="btn-secondary"
+                            invisible="state != 'error' or purchase_order_id"/>
                     <button name="action_create_purchase_order"
                             type="object"
                             string="Confirm &amp; Create RFQ"
@@ -322,13 +322,13 @@
                         <div class="pdi_kicker">Bulk Intake</div>
                         <h2>Upload multiple supplier documents</h2>
                         <p class="text-muted">
-                            Add PDF, image, Excel, or CSV documents. Each file is added to the processing queue and will move to Waiting Review after extraction.
+                            Add PDF, image, Excel, or CSV documents. Files are queued automatically and processed in upload order: first uploaded, first processed.
                         </p>
                         <field name="attachment_ids" widget="many2many_binary" nolabel="1"/>
                     </div>
                 </sheet>
                 <footer>
-                    <button name="action_enqueue_documents" type="object" string="Add to Queue" class="btn-primary"/>
+                    <button name="action_enqueue_documents" type="object" string="Upload &amp; Start Processing" class="btn-primary"/>
                     <button string="Cancel" special="cancel" class="btn-secondary"/>
                 </footer>
             </form>
@@ -353,7 +353,7 @@
         <field name="help" type="html">
             <div class="o_view_nocontent_smiling_face"/>
             <h2>The processing queue is clear</h2>
-            <p>Use Upload Documents to add multiple supplier files. Queued files are processed automatically and move to Waiting Review when complete.</p>
+            <p>Use Upload Documents to add multiple supplier files. Processing starts automatically in FIFO order and completed documents move to Waiting Review.</p>
         </field>
     </record>
 

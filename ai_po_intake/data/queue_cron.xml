@@ -4,7 +4,7 @@
         <field name="name">Purchase Document Intake: Process Queue</field>
         <field name="model_id" ref="model_ai_purchase_intake"/>
         <field name="state">code</field>
-        <field name="code">model.cron_process_queue(batch_size=5)</field>
+        <field name="code">model.cron_process_queue(batch_size=10)</field>
         <field name="interval_number">1</field>
         <field name="interval_type">minutes</field>
         <field name="active" eval="True"/>
