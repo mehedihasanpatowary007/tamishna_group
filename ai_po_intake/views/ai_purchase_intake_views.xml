@@ -12,7 +12,7 @@
                 <filter name="waiting_review" string="Waiting Review" domain="[('state', 'in', ['review', 'error'])]"/>
                 <filter name="created" string="RFQ Created" domain="[('state', '=', 'created')]"/>
                 <separator/>
-                <group expand="0" string="Group By">
+                <group>
                     <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
                     <filter name="group_vendor" string="Vendor" context="{'group_by': 'partner_id'}"/>
                     <filter name="group_company" string="Company" context="{'group_by': 'company_id'}" groups="base.group_multi_company"/>

@@ -1,4 +1,4 @@
-# Odoo 19 AI PO Intake — Setup Guide (v19.0.1.0.1)
+# Odoo 19 AI PO Intake — Setup Guide (v19.0.1.0.2)
 
 ## Workflow
 

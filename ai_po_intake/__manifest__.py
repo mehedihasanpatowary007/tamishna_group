@@ -1,7 +1,7 @@
 {
     "name": "AI Purchase Document Preview",
     "summary": "Use Odoo AI to extract purchase documents into a reviewable preview before creating an RFQ/PO",
-    "version": "19.0.1.0.1",
+    "version": "19.0.1.0.2",
     "category": "Purchases",
     "author": "Custom",
     "license": "LGPL-3",
