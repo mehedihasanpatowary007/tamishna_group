@@ -274,6 +274,47 @@ class AIPurchaseIntake(models.Model):
         return [item for item in data if isinstance(item, dict)]
 
     @api.model
+    def ai_create_preview_from_payload(
+        self,
+        payload_json,
+        source_document_id=False,
+        document_name="",
+    ):
+        """Create a review preview from one JSON payload supplied by an Odoo AI tool.
+
+        A single AI-schema argument keeps the native Odoo AI Tool configuration simple
+        and avoids version-specific schema model details in module XML.
+        """
+        if isinstance(payload_json, dict):
+            payload = payload_json
+        else:
+            raw = self._normalize_text(payload_json)
+            if not raw:
+                payload = {}
+            else:
+                try:
+                    payload = json.loads(raw)
+                except json.JSONDecodeError as exc:
+                    raise UserError(_("AI returned invalid payload JSON: %s") % exc) from exc
+        if not isinstance(payload, dict):
+            raise UserError(_("The AI payload must be a JSON object."))
+
+        lines = payload.get("lines", payload.get("order_lines", payload.get("items", [])))
+        return self.ai_create_preview(
+            source_document_id=source_document_id,
+            document_name=document_name or payload.get("document_name", ""),
+            vendor_name=payload.get("vendor_name", ""),
+            vendor_email=payload.get("vendor_email", ""),
+            vendor_vat=payload.get("vendor_vat", payload.get("vendor_tax_id", "")),
+            vendor_reference=payload.get("vendor_reference", payload.get("reference", "")),
+            order_date=payload.get("order_date", payload.get("date", "")),
+            currency_code=payload.get("currency_code", payload.get("currency", "")),
+            notes=payload.get("notes", ""),
+            lines_json=lines,
+            extraction_summary=payload.get("extraction_summary", payload.get("warnings", "")),
+        )
+
+    @api.model
     def ai_create_preview(
         self,
         source_document_id=False,

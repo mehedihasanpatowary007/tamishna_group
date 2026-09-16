@@ -1,54 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!--
-        Tool for Odoo Documents -> AI Auto-sort.
-        The AI manager receives the current documents.document record as context, extracts
-        structured arguments, and calls this worker. The worker ONLY creates a preview.
+        Odoo 19 native AI Tool (Documents context).
+        Important: Odoo 19 marks tools with use_in_ai=True. The generic `usage`
+        selection must stay at its normal server-action value.
+
+        AI Schema is intentionally configured from the UI because its storage model
+        is an Enterprise implementation detail that has changed across 19.x builds.
+        See docs/SETUP_BN.md. Only one argument is required: payload_json.
     -->
     <record id="ai_tool_create_po_preview_from_document" model="ir.actions.server">
         <field name="name">PO Intake: Create Review Preview (Document)</field>
         <field name="model_id" ref="documents.model_documents_document"/>
-        <field name="usage">ai_tool</field>
         <field name="state">code</field>
+        <field name="use_in_ai" eval="True"/>
         <field name="code"><![CDATA[
-ai['result'] = env['ai.purchase.intake'].ai_create_preview(
+payload = payload_json if 'payload_json' in dir() else '{}'
+ai['result'] = env['ai.purchase.intake'].ai_create_preview_from_payload(
+    payload_json=payload,
     source_document_id=record.id,
     document_name=record.name,
-    vendor_name=vendor_name if 'vendor_name' in dir() else '',
-    vendor_email=vendor_email if 'vendor_email' in dir() else '',
-    vendor_vat=vendor_vat if 'vendor_vat' in dir() else '',
-    vendor_reference=vendor_reference if 'vendor_reference' in dir() else '',
-    order_date=order_date if 'order_date' in dir() else '',
-    currency_code=currency_code if 'currency_code' in dir() else '',
-    notes=notes if 'notes' in dir() else '',
-    lines_json=lines_json if 'lines_json' in dir() else '[]',
-    extraction_summary=extraction_summary if 'extraction_summary' in dir() else '',
 )
         ]]></field>
     </record>
 
-    <!--
-        Tool for an AI Agent/Topic conversation. It accepts the same extracted structure but
-        is anchored to res.users so it does not require a purchase preview record to exist first.
-        Availability in a conversation still depends on the Agent/Topic configuration in Odoo.
-    -->
+    <!-- Agent/topic tool. The user/agent extracts the uploaded document and supplies one JSON payload. -->
     <record id="ai_tool_create_po_preview_from_agent" model="ir.actions.server">
         <field name="name">PO Intake: Create Review Preview (Agent)</field>
         <field name="model_id" ref="base.model_res_users"/>
-        <field name="usage">ai_tool</field>
         <field name="state">code</field>
+        <field name="use_in_ai" eval="True"/>
         <field name="code"><![CDATA[
-ai['result'] = env['ai.purchase.intake'].ai_create_preview(
-    document_name=document_name if 'document_name' in dir() else '',
-    vendor_name=vendor_name if 'vendor_name' in dir() else '',
-    vendor_email=vendor_email if 'vendor_email' in dir() else '',
-    vendor_vat=vendor_vat if 'vendor_vat' in dir() else '',
-    vendor_reference=vendor_reference if 'vendor_reference' in dir() else '',
-    order_date=order_date if 'order_date' in dir() else '',
-    currency_code=currency_code if 'currency_code' in dir() else '',
-    notes=notes if 'notes' in dir() else '',
-    lines_json=lines_json if 'lines_json' in dir() else '[]',
-    extraction_summary=extraction_summary if 'extraction_summary' in dir() else '',
+payload = payload_json if 'payload_json' in dir() else '{}'
+ai['result'] = env['ai.purchase.intake'].ai_create_preview_from_payload(
+    payload_json=payload,
 )
         ]]></field>
     </record>

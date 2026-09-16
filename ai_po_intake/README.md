@@ -31,3 +31,7 @@ This module implements a human-in-the-loop purchase document workflow on top of 
 The tool arguments are installed automatically in `ir.actions.server.schema.arg` by the module's post-init hook.
 
 See `docs/SETUP_BN.md` for a Bangla setup guide and copy/paste prompts.
+
+## 19.0.1.0.1 compatibility fix
+
+Odoo 19 does **not** accept `ir.actions.server.usage = 'ai_tool'`. Native AI tools are standard server actions with `use_in_ai = True`. This version uses that mechanism and depends explicitly on `ai_server_actions`. AI Schema is configured once in the standard Odoo UI using the single `payload_json` argument; see `docs/SETUP_BN.md`.
