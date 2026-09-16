@@ -99,9 +99,30 @@ class AIPurchaseProviderConfig(models.Model):
         }
 
     def _build_prompt(self):
-        return """You extract purchasing data from a supplier quotation, proforma invoice, price offer, or similar purchasing document.
+        return r"""You extract purchasing data from a supplier quotation, proforma invoice, price offer, or similar purchasing document.
 
-Return ONLY structured JSON matching the supplied schema.
+Return ONLY one valid JSON object. Do not use markdown fences and do not add commentary before or after the JSON.
+
+Use exactly these keys and this shape:
+{
+  "vendor_name": "",
+  "vendor_email": "",
+  "vendor_vat": "",
+  "vendor_reference": "",
+  "order_date": "YYYY-MM-DD",
+  "currency_code": "",
+  "notes": "",
+  "extraction_summary": "",
+  "lines": [
+    {
+      "product_code": "",
+      "description": "",
+      "quantity": 0,
+      "unit_price": 0,
+      "uom": ""
+    }
+  ]
+}
 
 Rules:
 - Extract only values explicitly present in the uploaded document.
@@ -109,9 +130,10 @@ Rules:
 - Use an empty string for missing text values.
 - Keep product/item codes exactly as written.
 - Extract every product/item line.
-- quantity and unit_price must be numeric.
+- quantity and unit_price must be JSON numbers, not strings.
 - Convert a clear document date to YYYY-MM-DD; otherwise return an empty string.
 - Put uncertainties, unreadable values, or important warnings in extraction_summary.
+- Do not add extra top-level keys.
 - Do not create or confirm any Purchase Order. This request is extraction only.
 """
 
@@ -172,7 +194,6 @@ Rules:
         if not model:
             raise UserError(_("Gemini model is empty."))
         endpoint = (self.gemini_endpoint or "").strip().format(model=quote(model, safe=""))
-        schema = self._json_schema()
         body = {
             "contents": [
                 {
@@ -191,7 +212,6 @@ Rules:
             "generationConfig": {
                 "temperature": 0,
                 "responseMimeType": "application/json",
-                "responseSchema": schema,
             },
         }
         try:
@@ -312,16 +332,10 @@ Rules:
             model = (self.gemini_model or "").strip()
             endpoint = (self.gemini_endpoint or "").strip().format(model=quote(model, safe=""))
             body = {
-                "contents": [{"parts": [{"text": 'Return JSON with exactly one field: {"status":"OK"}'}]}],
+                "contents": [{"parts": [{"text": 'Return only this valid JSON object and nothing else: {"status":"OK"}'}]}],
                 "generationConfig": {
                     "temperature": 0,
                     "responseMimeType": "application/json",
-                    "responseSchema": {
-                        "type": "object",
-                        "properties": {"status": {"type": "string"}},
-                        "required": ["status"],
-                        "additionalProperties": False,
-                    },
                 },
             }
             headers = {"x-goog-api-key": self.gemini_api_key, "Content-Type": "application/json"}

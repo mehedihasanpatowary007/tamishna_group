@@ -49,3 +49,7 @@ Documents-এ PDF upload করুন → file select করুন → Actions �
 ## 5. Safety
 
 AI কখনও সরাসরি PO confirm করে না। Extraction শুধু preview বানায়। Human confirm করার পর draft RFQ তৈরি হয়।
+
+
+## v19.0.1.1.2 Gemini compatibility
+Gemini structured extraction now requests `application/json` without sending `responseSchema`. The exact purchase JSON shape is enforced in the prompt and validated/parsing is still performed by the module. This avoids REST schema compatibility errors across current Gemini 3.x models.

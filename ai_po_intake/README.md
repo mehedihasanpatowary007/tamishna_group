@@ -37,3 +37,7 @@ Default endpoints:
 ## Important
 
 The old native Odoo AI tools shipped in earlier versions of this module are disabled on upgrade so they do not route through Odoo's own provider selection.
+
+
+## v19.0.1.1.2 Gemini compatibility
+Gemini structured extraction now requests `application/json` without sending `responseSchema`. The exact purchase JSON shape is enforced in the prompt and validated/parsing is still performed by the module. This avoids REST schema compatibility errors across current Gemini 3.x models.

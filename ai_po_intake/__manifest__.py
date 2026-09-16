@@ -1,7 +1,7 @@
 {
     "name": "AI Purchase Document Preview",
     "summary": "Extract supplier documents with selectable Gemini/OpenAI endpoints, review them, then create an RFQ",
-    "version": "19.0.1.1.1",
+    "version": "19.0.1.1.2",
     "category": "Purchases",
     "author": "Custom",
     "license": "LGPL-3",
