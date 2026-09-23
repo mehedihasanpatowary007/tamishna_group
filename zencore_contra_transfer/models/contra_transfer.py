@@ -182,9 +182,8 @@ class ContraTransfer(models.Model):
     )
     transfer_account_id = fields.Many2one(
         "account.account",
-        string="Transfer Clearing Account",
+        string="Internal Transfer Account",
         related="company_id.transfer_account_id",
-        help="Odoo 19 clearing account used to bridge the outgoing and incoming bank transactions. It is not an extra bank balance.",
         readonly=True,
     )
     age_days = fields.Integer(string="Days In Transit", compute="_compute_age_days")
