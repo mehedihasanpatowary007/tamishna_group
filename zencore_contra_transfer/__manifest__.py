@@ -1,7 +1,7 @@
 {
     "name": "Contra Transfer Management",
     "summary": "Controlled bank/cash internal transfers for Odoo 19 with approval, bank matching, charges and reporting",
-    "version": "19.0.1.1.0",
+    "version": "19.0.1.2.0",
     "category": "Accounting/Accounting",
     "author": "Mehedi Hasan",
     "website": "https://www.zencoreltd.com",

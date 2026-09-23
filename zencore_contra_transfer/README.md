@@ -100,3 +100,14 @@ The field is intentionally hidden from the normal transfer form because users do
 - Source and destination journals must use the same currency in this version.
 - The module deliberately uses Odoo 19 bank transaction objects so the entries remain visible in the journal's transaction/bank-matching workflow.
 - Production deployment should always be tested first on a staging copy of the target Odoo 19 database and localization.
+
+
+## UI refresh - 19.0.1.2.0
+
+- Reworked the form using native Odoo 19 form patterns.
+- Added Cancelled/Reversed ribbons and In-Transit/Completed context banners.
+- Simplified the main form to business fields only.
+- Moved ledger mapping, clearing account, bank transactions and journal entries to a manager-only Accounting tab.
+- Improved workflow button labels and smart-button layout.
+- Improved list/search filters and empty-state help.
+- Existing logo and accounting behavior are unchanged.
