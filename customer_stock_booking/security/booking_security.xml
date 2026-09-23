@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="module_category_customer_stock_booking" model="ir.module.category">
+        <field name="name">Customer Stock Booking</field>
+        <field name="sequence">35</field>
+    </record>
+
+    <record id="privilege_customer_stock_booking" model="res.groups.privilege">
+        <field name="name">Customer Stock Booking</field>
+        <field name="category_id" ref="customer_stock_booking.module_category_customer_stock_booking"/>
+        <field name="sequence">35</field>
+    </record>
+
+    <record id="group_booking_user" model="res.groups">
+        <field name="name">Booking User</field>
+        <field name="sequence">10</field>
+        <field name="privilege_id" ref="customer_stock_booking.privilege_customer_stock_booking"/>
+    </record>
+
+    <record id="group_booking_sales_admin" model="res.groups">
+        <field name="name">Sales Administrator</field>
+        <field name="sequence">20</field>
+        <field name="privilege_id" ref="customer_stock_booking.privilege_customer_stock_booking"/>
+        <field name="implied_ids" eval="[(4, ref('customer_stock_booking.group_booking_user'))]"/>
+    </record>
+
+    <record id="group_booking_inventory_admin" model="res.groups">
+        <field name="name">Inventory Administrator</field>
+        <field name="sequence">30</field>
+        <field name="privilege_id" ref="customer_stock_booking.privilege_customer_stock_booking"/>
+        <field name="implied_ids" eval="[(4, ref('customer_stock_booking.group_booking_user'))]"/>
+    </record>
+
+    <record id="rule_booking_company" model="ir.rule">
+        <field name="name">Customer Booking: company rule</field>
+        <field name="model_id" ref="model_customer_stock_booking"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+        <field name="groups" eval="[(4, ref('customer_stock_booking.group_booking_user'))]"/>
+    </record>
+
+    <record id="rule_booking_line_company" model="ir.rule">
+        <field name="name">Customer Booking Line: company rule</field>
+        <field name="model_id" ref="model_customer_stock_booking_line"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+        <field name="groups" eval="[(4, ref('customer_stock_booking.group_booking_user'))]"/>
+    </record>
+
+    <record id="rule_booking_allocation_company" model="ir.rule">
+        <field name="name">Customer Booking Allocation: company rule</field>
+        <field name="model_id" ref="model_customer_stock_booking_allocation"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+        <field name="groups" eval="[(4, ref('customer_stock_booking.group_booking_user'))]"/>
+    </record>
+
+    <record id="rule_booking_delivery_history_company" model="ir.rule">
+        <field name="name">Customer Booking Delivery History: company rule</field>
+        <field name="model_id" ref="model_customer_stock_booking_delivery_history"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+        <field name="groups" eval="[(4, ref('customer_stock_booking.group_booking_user'))]"/>
+    </record>
+
+</odoo>

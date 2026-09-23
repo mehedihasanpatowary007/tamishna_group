@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_booking_user,customer.stock.booking user,model_customer_stock_booking,customer_stock_booking.group_booking_user,1,1,1,1
+access_booking_line_user,customer.stock.booking.line user,model_customer_stock_booking_line,customer_stock_booking.group_booking_user,1,1,1,1
+access_booking_allocation_user,customer.stock.booking.allocation user,model_customer_stock_booking_allocation,customer_stock_booking.group_booking_user,1,0,0,0
+access_booking_delivery_history_user,customer.stock.booking.delivery.history user,model_customer_stock_booking_delivery_history,customer_stock_booking.group_booking_user,1,0,0,0
+access_booking_delivery_wizard_user,customer.stock.booking.delivery.wizard user,model_customer_stock_booking_delivery_wizard,customer_stock_booking.group_booking_user,1,1,1,1
+access_stock_lot_booking_user,stock.lot booking read,stock.model_stock_lot,customer_stock_booking.group_booking_user,1,0,0,0
