@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_contra_transfer" model="ir.actions.report">
+        <field name="name">Contra Transfer Voucher</field>
+        <field name="model">contra.transfer</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">zencore_contra_transfer.report_contra_transfer_document</field>
+        <field name="report_file">zencore_contra_transfer.report_contra_transfer_document</field>
+        <field name="binding_model_id" ref="model_contra_transfer"/>
+        <field name="binding_type">report</field>
+        <field name="print_report_name">'Contra Transfer - %s' % (object.name)</field>
+    </record>
+
+    <template id="report_contra_transfer_document">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Contra Transfer Voucher</h2>
+                        <table class="table table-sm table-borderless">
+                            <tbody>
+                                <tr>
+                                    <td><strong>Transfer No.</strong></td>
+                                    <td><span t-field="o.name"/></td>
+                                    <td><strong>Date</strong></td>
+                                    <td><span t-field="o.date"/></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>From</strong></td>
+                                    <td><span t-field="o.source_journal_id"/></td>
+                                    <td><strong>To</strong></td>
+                                    <td><span t-field="o.destination_journal_id"/></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>From Ledger</strong></td>
+                                    <td><span t-field="o.source_account_id"/></td>
+                                    <td><strong>To Ledger</strong></td>
+                                    <td><span t-field="o.destination_account_id"/></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Amount</strong></td>
+                                    <td><span t-field="o.amount" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/></td>
+                                    <td><strong>Bank Charge</strong></td>
+                                    <td><span t-field="o.bank_charge" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Total Outflow</strong></td>
+                                    <td><span t-field="o.total_outflow" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/></td>
+                                    <td><strong>Status</strong></td>
+                                    <td><span t-field="o.state"/></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Reference</strong></td>
+                                    <td colspan="3"><span t-field="o.reference"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="mt-4" t-if="o.remarks">
+                            <strong>Remarks</strong>
+                            <p t-field="o.remarks"/>
+                        </div>
+                        <div class="mt-5">
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td style="width:33%"><strong>Submitted By</strong><br/><span t-field="o.submitted_by_id"/></td>
+                                    <td style="width:33%"><strong>Approved By</strong><br/><span t-field="o.approved_by_id"/></td>
+                                    <td style="width:33%"><strong>Received By</strong><br/><span t-field="o.received_by_id"/></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

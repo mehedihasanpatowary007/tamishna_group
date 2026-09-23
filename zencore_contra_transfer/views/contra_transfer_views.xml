@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_contra_transfer_list" model="ir.ui.view">
+        <field name="name">contra.transfer.list</field>
+        <field name="model">contra.transfer</field>
+        <field name="arch" type="xml">
+            <list string="Contra Transfers"
+                  decoration-warning="state == 'in_transit'"
+                  decoration-success="state == 'completed'"
+                  decoration-muted="state in ('cancelled', 'reversed')">
+                <field name="name"/>
+                <field name="date"/>
+                <field name="source_journal_id"/>
+                <field name="destination_journal_id"/>
+                <field name="amount" sum="Total Transfer"/>
+                <field name="bank_charge" sum="Total Charges" optional="show"/>
+                <field name="total_outflow" sum="Total Outflow" optional="hide"/>
+                <field name="currency_id" column_invisible="True"/>
+                <field name="age_days" optional="show"/>
+                <field name="reference" optional="show"/>
+                <field name="approved_by_id" optional="hide"/>
+                <field name="state" widget="badge"/>
+                <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_contra_transfer_form" model="ir.ui.view">
+        <field name="name">contra.transfer.form</field>
+        <field name="model">contra.transfer</field>
+        <field name="arch" type="xml">
+            <form string="Contra Transfer">
+                <header>
+                    <button name="action_submit" type="object" string="Submit" class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_approve" type="object" string="Approve" class="btn-primary" groups="account.group_account_manager" invisible="state != 'submitted'"/>
+                    <button name="action_mark_sent" type="object" string="Mark Sent" class="btn-primary" invisible="state != 'approved'"/>
+                    <button name="action_mark_received" type="object" string="Mark Received" class="btn-primary" invisible="state != 'in_transit'"/>
+                    <button name="action_reverse" type="object" string="Reverse" class="btn-secondary" groups="account.group_account_manager" invisible="state not in ('in_transit', 'completed')" confirm="This will create compensating Odoo 19 bank transactions. Continue?"/>
+                    <button name="action_cancel" type="object" string="Cancel" invisible="state not in ('draft', 'submitted', 'approved')"/>
+                    <button name="action_reset_to_draft" type="object" string="Reset to Draft" invisible="state != 'cancelled'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,submitted,approved,in_transit,completed"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_source_transaction" type="object" class="oe_stat_button" icon="fa-arrow-circle-o-up" invisible="not source_statement_line_id">
+                            <div class="o_stat_info"><span class="o_stat_text">Source Transaction</span></div>
+                        </button>
+                        <button name="action_view_destination_transaction" type="object" class="oe_stat_button" icon="fa-arrow-circle-o-down" invisible="not destination_statement_line_id">
+                            <div class="o_stat_info"><span class="o_stat_text">Destination Transaction</span></div>
+                        </button>
+                        <button name="action_view_charge_transaction" type="object" class="oe_stat_button" icon="fa-money" invisible="not bank_charge_statement_line_id">
+                            <div class="o_stat_info"><span class="o_stat_text">Bank Charge</span></div>
+                        </button>
+                        <button name="action_view_reversals" type="object" class="oe_stat_button" icon="fa-undo" invisible="not reversal_statement_line_ids">
+                            <div class="o_stat_info"><span class="o_stat_text">Reversals</span></div>
+                        </button>
+                    </div>
+
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+
+                    <group>
+                        <group string="Transfer">
+                            <field name="date" readonly="state != 'draft'"/>
+                            <field name="company_id" groups="base.group_multi_company" readonly="state != 'draft'"/>
+                            <field name="source_journal_id" readonly="state != 'draft'"/>
+                            <field name="source_account_id" readonly="1"/>
+                            <field name="destination_journal_id" readonly="state != 'draft'"/>
+                            <field name="destination_account_id" readonly="1"/>
+                            <field name="transfer_account_id" readonly="1"/>
+                        </group>
+                        <group string="Amounts &amp; Reference">
+                            <field name="currency_id" readonly="1"/>
+                            <field name="amount" readonly="state != 'draft'"/>
+                            <field name="bank_charge" readonly="state != 'draft'"/>
+                            <field name="bank_charge_account_id" readonly="state != 'draft'" invisible="not bank_charge"/>
+                            <field name="total_outflow" readonly="1"/>
+                            <field name="reference" readonly="state not in ('draft', 'submitted')"/>
+                            <field name="age_days" readonly="1" invisible="state != 'in_transit'"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Notes &amp; Documents">
+                            <group>
+                                <field name="remarks" placeholder="Purpose, bank instruction, cheque/BEFTN reference, etc." readonly="state in ('completed', 'reversed')"/>
+                                <field name="attachment_ids" widget="many2many_binary"/>
+                            </group>
+                        </page>
+                        <page string="Approval &amp; Audit">
+                            <group>
+                                <group>
+                                    <field name="submitted_by_id" readonly="1"/>
+                                    <field name="submitted_date" readonly="1"/>
+                                    <field name="approved_by_id" readonly="1"/>
+                                    <field name="approved_date" readonly="1"/>
+                                </group>
+                                <group>
+                                    <field name="sent_by_id" readonly="1"/>
+                                    <field name="sent_date" readonly="1"/>
+                                    <field name="received_by_id" readonly="1"/>
+                                    <field name="received_date" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Odoo 19 Bank Transactions">
+                            <group>
+                                <field name="source_statement_line_id" readonly="1"/>
+                                <field name="source_move_id" readonly="1"/>
+                                <field name="destination_statement_line_id" readonly="1"/>
+                                <field name="destination_move_id" readonly="1"/>
+                                <field name="bank_charge_statement_line_id" readonly="1"/>
+                                <field name="bank_charge_move_id" readonly="1"/>
+                                <field name="reversal_statement_line_ids" readonly="1" widget="many2many_tags"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_contra_transfer_search" model="ir.ui.view">
+        <field name="name">contra.transfer.search</field>
+        <field name="model">contra.transfer</field>
+        <field name="arch" type="xml">
+            <search string="Contra Transfers">
+                <field name="name"/>
+                <field name="reference"/>
+                <field name="source_journal_id"/>
+                <field name="destination_journal_id"/>
+                <filter name="draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+                <filter name="pending_approval" string="Pending Approval" domain="[('state', '=', 'submitted')]"/>
+                <filter name="in_transit" string="In Transit" domain="[('state', '=', 'in_transit')]"/>
+                <filter name="completed" string="Completed" domain="[('state', '=', 'completed')]"/>
+                <filter name="reversed" string="Reversed" domain="[('state', '=', 'reversed')]"/>
+                <filter name="with_charge" string="With Bank Charge" domain="[('bank_charge', '&gt;', 0)]"/>
+                <separator/>
+                <filter name="group_source" string="From Journal" context="{'group_by': 'source_journal_id'}"/>
+                <filter name="group_destination" string="To Journal" context="{'group_by': 'destination_journal_id'}"/>
+                <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
+                <filter name="group_month" string="Month" context="{'group_by': 'date:month'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_contra_transfer_pivot" model="ir.ui.view">
+        <field name="name">contra.transfer.pivot</field>
+        <field name="model">contra.transfer</field>
+        <field name="arch" type="xml">
+            <pivot string="Contra Transfer Analysis">
+                <field name="source_journal_id" type="row"/>
+                <field name="destination_journal_id" type="row"/>
+                <field name="date" type="col" interval="month"/>
+                <field name="amount" type="measure"/>
+                <field name="bank_charge" type="measure"/>
+                <field name="total_outflow" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_contra_transfer_graph" model="ir.ui.view">
+        <field name="name">contra.transfer.graph</field>
+        <field name="model">contra.transfer</field>
+        <field name="arch" type="xml">
+            <graph string="Contra Transfer Analysis" type="bar">
+                <field name="date" interval="month"/>
+                <field name="amount" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="action_contra_transfer" model="ir.actions.act_window">
+        <field name="name">Contra Transfers</field>
+        <field name="res_model">contra.transfer</field>
+        <field name="view_mode">list,form,pivot,graph</field>
+        <field name="search_view_id" ref="view_contra_transfer_search"/>
+    </record>
+
+    <record id="action_contra_transfer_in_transit" model="ir.actions.act_window">
+        <field name="name">In-Transit Transfers</field>
+        <field name="res_model">contra.transfer</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('state', '=', 'in_transit')]</field>
+        <field name="search_view_id" ref="view_contra_transfer_search"/>
+    </record>
+
+    <record id="action_contra_transfer_bank_charge" model="ir.actions.act_window">
+        <field name="name">Bank Charges</field>
+        <field name="res_model">contra.transfer</field>
+        <field name="view_mode">list,pivot,graph,form</field>
+        <field name="domain">[('bank_charge', '&gt;', 0)]</field>
+        <field name="search_view_id" ref="view_contra_transfer_search"/>
+    </record>
+
+    <record id="action_contra_transfer_analysis" model="ir.actions.act_window">
+        <field name="name">Transfer Analysis</field>
+        <field name="res_model">contra.transfer</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="domain">[('state', 'in', ('in_transit', 'completed', 'reversed'))]</field>
+        <field name="search_view_id" ref="view_contra_transfer_search"/>
+    </record>
+
+    <menuitem id="menu_contra_transfer_root" name="Contra Transfers" sequence="45" groups="account.group_account_user"/>
+    <menuitem id="menu_contra_transfer_operations" name="Operations" parent="menu_contra_transfer_root" sequence="10"/>
+    <menuitem id="menu_contra_transfer_all" name="Transfer Register" parent="menu_contra_transfer_operations" action="action_contra_transfer" sequence="10"/>
+    <menuitem id="menu_contra_transfer_in_transit" name="In Transit" parent="menu_contra_transfer_operations" action="action_contra_transfer_in_transit" sequence="20"/>
+    <menuitem id="menu_contra_transfer_reports" name="Reports" parent="menu_contra_transfer_root" sequence="20"/>
+    <menuitem id="menu_contra_transfer_analysis" name="Transfer Analysis" parent="menu_contra_transfer_reports" action="action_contra_transfer_analysis" sequence="10"/>
+    <menuitem id="menu_contra_transfer_bank_charge" name="Bank Charges" parent="menu_contra_transfer_reports" action="action_contra_transfer_bank_charge" sequence="20"/>
+</odoo>
