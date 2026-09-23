@@ -69,7 +69,6 @@
                             <field name="source_account_id" readonly="1"/>
                             <field name="destination_journal_id" readonly="state != 'draft'"/>
                             <field name="destination_account_id" readonly="1"/>
-                            <field name="transfer_account_id" readonly="1"/>
                         </group>
                         <group string="Amounts &amp; Reference">
                             <field name="currency_id" readonly="1"/>
@@ -113,6 +112,7 @@
                                 <field name="destination_move_id" readonly="1"/>
                                 <field name="bank_charge_statement_line_id" readonly="1"/>
                                 <field name="bank_charge_move_id" readonly="1"/>
+                                <field name="transfer_account_id" readonly="1" groups="account.group_account_manager"/>
                                 <field name="reversal_statement_line_ids" readonly="1" widget="many2many_tags"/>
                             </group>
                         </page>
@@ -204,7 +204,7 @@
         <field name="search_view_id" ref="view_contra_transfer_search"/>
     </record>
 
-    <menuitem id="menu_contra_transfer_root" name="Contra Transfers" sequence="45" groups="account.group_account_user"/>
+    <menuitem id="menu_contra_transfer_root" name="Contra Transfers" sequence="45" groups="account.group_account_user" web_icon="zencore_contra_transfer,static/description/icon.png"/>
     <menuitem id="menu_contra_transfer_operations" name="Operations" parent="menu_contra_transfer_root" sequence="10"/>
     <menuitem id="menu_contra_transfer_all" name="Transfer Register" parent="menu_contra_transfer_operations" action="action_contra_transfer" sequence="10"/>
     <menuitem id="menu_contra_transfer_in_transit" name="In Transit" parent="menu_contra_transfer_operations" action="action_contra_transfer_in_transit" sequence="20"/>

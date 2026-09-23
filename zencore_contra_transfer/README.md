@@ -66,6 +66,13 @@ The Internal Transfer debit and credit are then reconciled.
 - Printable Contra Transfer Voucher
 - Chatter-based audit trail and approval metadata
 
+
+## Version 19.0.1.1.0
+
+- Added standard transfer app icon and root-menu `web_icon`.
+- Hid the transfer clearing account from the normal form to reduce user confusion.
+- Renamed the technical field label to **Transfer Clearing Account**.
+
 ## Installation
 
 1. Copy `zencore_contra_transfer` into your Odoo 19 custom addons path.
@@ -74,9 +81,19 @@ The Internal Transfer debit and credit are then reconciled.
 4. Search for **Contra Transfer Management**.
 5. Install.
 
-## Standard logo
+## App logo
 
-No custom icon/logo file is bundled. Odoo uses the standard/default app presentation as requested.
+A standard transfer-style app icon is bundled at `static/description/icon.png` and is also assigned to the root **Contra Transfers** menu through `web_icon`. After upgrading the module, refresh the browser/app menu to see it.
+
+## Why the Transfer Clearing Account remains in the backend
+
+Odoo 19 represents a bank-to-bank internal transfer as two bank/cash transactions: one outgoing and one incoming. The company Internal Transfer account is the bridge between those two transactions. This module calls it the **Transfer Clearing Account** in its technical view.
+
+- Sent side: Dr Transfer Clearing / Cr Source Bank
+- Received side: Dr Destination Bank / Cr Transfer Clearing
+- The two clearing lines are reconciled, leaving a zero balance when the transfer is complete.
+
+The field is intentionally hidden from the normal transfer form because users do not need to select it. It is still shown to Accounting Managers in the technical bank-transactions tab for audit purposes. Removing the account from the backend posting logic would break the clean two-sided bank reconciliation/in-transit workflow.
 
 ## Notes
 
