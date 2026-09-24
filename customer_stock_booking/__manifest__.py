@@ -1,6 +1,6 @@
 {
     'name': 'Customer Stock Booking',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.0.1',
     'summary': 'Standalone customer stock booking with two-level approval and expiry',
     'description': '''
 Customer-specific standalone stock booking without Sales Orders or Manufacturing Orders.

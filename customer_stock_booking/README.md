@@ -48,3 +48,6 @@ The approval roles imply Booking User access. System Administrators configure th
 ## Important implementation note
 
 This package was statically checked for Python/XML syntax in the generated environment, but it was not executed against your exact Odoo server/database. Run it first on a staging Odoo 19 database and execute your normal module upgrade/test pipeline before production deployment.
+
+## 19.0.1.0.1
+- Fixed Odoo 19 search-view validation: search `<group>` nodes no longer use legacy `expand` / `string` attributes.

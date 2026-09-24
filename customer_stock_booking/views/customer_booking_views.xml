@@ -26,7 +26,7 @@
                 <filter name="active_booking" string="Active" domain="[('state', '=', 'active')]"/>
                 <filter name="open_booking" string="Open" domain="[('state', 'in', ['draft','submitted','sales_approved','active'])]"/>
                 <filter name="expired_booking" string="Expired" domain="[('state', '=', 'expired')]"/>
-                <group expand="0" string="Group By">
+                <group>
                     <filter string="Customer" name="group_customer" context="{'group_by': 'partner_id'}"/>
                     <filter string="Warehouse" name="group_warehouse" context="{'group_by': 'warehouse_id'}"/>
                     <filter string="Status" name="group_state" context="{'group_by': 'state'}"/>

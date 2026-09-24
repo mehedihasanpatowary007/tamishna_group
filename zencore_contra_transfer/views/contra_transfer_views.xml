@@ -249,9 +249,9 @@
                 <filter name="reversed" string="Reversed" domain="[('state', '=', 'reversed')]"/>
                 <separator/>
                 <filter name="with_charge" string="With Bank Charge" domain="[('bank_charge', '&gt;', 0)]"/>
-                <filter name="today" string="Today" domain="[('date', '=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter name="today" string="Today" domain="[('date', '=', 'today')]"/>
                 <separator/>
-                <group expand="0" string="Group By">
+                <group>
                     <filter name="group_source" string="From Journal" context="{'group_by': 'source_journal_id'}"/>
                     <filter name="group_destination" string="To Journal" context="{'group_by': 'destination_journal_id'}"/>
                     <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>

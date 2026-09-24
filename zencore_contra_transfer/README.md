@@ -111,3 +111,8 @@ The field is intentionally hidden from the normal transfer form because users do
 - Improved workflow button labels and smart-button layout.
 - Improved list/search filters and empty-state help.
 - Existing logo and accounting behavior are unchanged.
+
+
+## 19.0.1.2.1
+- Fixed Odoo 19 search-view validation: removed unsupported `expand` and `string` attributes from the search `<group>`.
+- Updated Today filter to the Odoo 19 dynamic date value `today`.
