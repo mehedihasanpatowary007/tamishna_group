@@ -51,3 +51,10 @@ This package was statically checked for Python/XML syntax in the generated envir
 
 ## 19.0.1.0.1
 - Fixed Odoo 19 search-view validation: search `<group>` nodes no longer use legacy `expand` / `string` attributes.
+
+
+## Changelog
+
+### 19.0.1.0.2
+- Odoo 19 compatibility: removed obsolete `target=inline` from the Settings window action.
+- Revalidated search views and action target values against Odoo 19.
